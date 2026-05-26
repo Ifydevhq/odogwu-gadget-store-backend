@@ -16,7 +16,10 @@
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "seed:db": "ts-node src/scripts/seed-database.ts",
-    "seed:admin": "ts-node src/scripts/seed-admin.ts"
+    "seed:admin": "ts-node src/scripts/seed-admin.ts",
+    "seed:odogwu": "ts-node src/scripts/seed-odogwu-laptops.ts",
+    "seed:laptops": "ts-node src/scripts/seed-real-laptops.ts",
+    "update:store-logo": "ts-node src/scripts/update-store-logo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

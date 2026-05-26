@@ -38,12 +38,7 @@ async function bootstrap() {
   // In production, you'd restrict 'origin' to your actual domain.
   // -------------------------------------------------------------------
   app.enableCors({
-    origin: process.env.CORS_ORIGIN?.split(',') || [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://localhost:3003',
-    ],
+    origin: process.env.CORS_ORIGIN?.split(',') || true, // true = allow all origins in dev
     credentials: true,
   });
 

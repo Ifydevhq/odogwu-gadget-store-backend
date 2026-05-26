@@ -79,16 +79,27 @@ let ChatService = ChatService_1 = class ChatService {
             .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
             .exec();
         if (conversation) {
-            if (dto.productContext && !conversation.productContext) {
-                conversation.productContext = {
-                    listingId: new mongoose_2.Types.ObjectId(dto.productContext.listingId),
-                    itemName: dto.productContext.itemName,
-                    price: dto.productContext.price,
-                    image: dto.productContext.image || '',
-                };
-                await conversation.save();
+            if (dto.productContext) {
+                const priceFormatted = dto.productContext.price
+                    ? `₦${(dto.productContext.price / 100).toLocaleString()}`
+                    : '';
+                const productMsg = `Hi! I'm interested in "${dto.productContext.itemName}"${priceFormatted ? ` — ${priceFormatted}` : ''}`;
+                await this.sendMessage(conversation._id.toString(), userId, {
+                    content: productMsg,
+                    type: 'product',
+                    metadata: {
+                        listingId: dto.productContext.listingId,
+                        itemName: dto.productContext.itemName,
+                        price: dto.productContext.price,
+                        image: dto.productContext.image,
+                    },
+                });
+                conversation = await this.conversationModel
+                    .findById(conversation._id)
+                    .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+                    .exec();
             }
-            if (dto.initialMessage) {
+            if (dto.initialMessage && !dto.productContext) {
                 await this.sendMessage(conversation._id.toString(), userId, {
                     content: dto.initialMessage,
                     type: 'text',

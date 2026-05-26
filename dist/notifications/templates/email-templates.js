@@ -12,7 +12,7 @@ function baseLayout(brand, content) {
     const { appName, logoUrl, frontendUrl } = brand;
     const year = new Date().getFullYear();
     const logoHtml = logoUrl
-        ? `<img src="${logoUrl}" alt="${appName}" style="max-height: 48px; max-width: 180px;" />`
+        ? `<img src="${logoUrl}" alt="${appName}" style="max-height: 72px; max-width: 260px;" />`
         : `<span style="font-size: 28px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px;">${appName}</span>`;
     return `
 <!DOCTYPE html>
