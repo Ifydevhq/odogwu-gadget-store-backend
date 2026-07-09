@@ -56,7 +56,7 @@ async function bootstrap() {
             filter: true,
         },
     });
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 5001;
     await app.listen(port);
     common_1.Logger.log(`🚀 Comaket API running on: http://localhost:${port}`, 'Bootstrap');
     common_1.Logger.log(`📚 API Docs available at: http://localhost:${port}/api-docs`, 'Bootstrap');

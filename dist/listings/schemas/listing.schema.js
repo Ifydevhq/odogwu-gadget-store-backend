@@ -54,6 +54,10 @@ __decorate([
     __metadata("design:type", String)
 ], Listing.prototype, "category", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", String)
+], Listing.prototype, "subCategory", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: [String], default: [] }),
     __metadata("design:type", Array)
 ], Listing.prototype, "tags", void 0);
@@ -238,6 +242,7 @@ exports.ListingSchema.index({ creatorId: 1, status: 1 });
 exports.ListingSchema.index({ userId: 1 });
 exports.ListingSchema.index({ type: 1, status: 1 });
 exports.ListingSchema.index({ category: 1, status: 1 });
+exports.ListingSchema.index({ category: 1, subCategory: 1, status: 1 });
 exports.ListingSchema.index({ status: 1, createdAt: -1 });
 exports.ListingSchema.index({ itemName: 'text', description: 'text', tags: 'text' });
 exports.ListingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

@@ -144,10 +144,18 @@ export class CreateListingDto {
   @Type(() => MediaItemDto)
   media: MediaItemDto[];
 
-  @ApiPropertyOptional({ example: 'fashion' })
+  @ApiPropertyOptional({ example: 'laptops' })
   @IsString()
   @IsOptional()
   category?: string;
+
+  @ApiPropertyOptional({
+    example: 'hp',
+    description: 'Sub-category slug (brand/type) within the category',
+  })
+  @IsString()
+  @IsOptional()
+  subCategory?: string;
 
   @ApiPropertyOptional({
     example: ['leather', 'handmade', 'bag'],
@@ -291,10 +299,18 @@ export class QueryListingsDto extends PaginationDto {
   @IsOptional()
   condition?: ItemCondition;
 
-  @ApiPropertyOptional({ example: 'fashion' })
+  @ApiPropertyOptional({ example: 'laptops' })
   @IsString()
   @IsOptional()
   category?: string;
+
+  @ApiPropertyOptional({
+    example: 'hp',
+    description: 'Filter by sub-category slug (brand/type) within a category',
+  })
+  @IsString()
+  @IsOptional()
+  subCategory?: string;
 
   @ApiPropertyOptional({ description: 'Filter by store ID' })
   @IsString()

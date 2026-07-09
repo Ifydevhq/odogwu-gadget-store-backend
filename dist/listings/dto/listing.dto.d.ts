@@ -24,6 +24,7 @@ export declare class CreateListingDto {
     askingPrice: PriceInfoDto;
     media: MediaItemDto[];
     category?: string;
+    subCategory?: string;
     tags?: string[];
     quantity?: number;
     location?: ListingLocationDto;
@@ -46,6 +47,7 @@ export declare class QueryListingsDto extends PaginationDto {
     status?: ListingStatus;
     condition?: ItemCondition;
     category?: string;
+    subCategory?: string;
     storeId?: string;
     creatorId?: string;
     minPrice?: number;

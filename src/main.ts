@@ -10,7 +10,7 @@
  * 4. We start listening on a port
  *
  * CORS (Cross-Origin Resource Sharing): Allows your Next.js frontend (running on
- * localhost:3000) to talk to this backend (running on localhost:5000).
+ * localhost:3001) to talk to this backend (running on localhost:5001).
  *
  * ValidationPipe: Automatically validates incoming request bodies against your DTOs.
  * If someone sends { name: 123 } but your DTO says @IsString(), NestJS will reject
@@ -69,7 +69,7 @@ async function bootstrap() {
   // -------------------------------------------------------------------
   // Swagger: Auto-generates interactive API documentation from your
   // decorators (@ApiTags, @ApiOperation, @ApiResponse, etc.)
-  // Visit http://localhost:5000/api-docs to see it.
+  // Visit http://localhost:5001/api-docs to see it.
   // -------------------------------------------------------------------
   const config = new DocumentBuilder()
     .setTitle('Comaket API')
@@ -116,7 +116,7 @@ async function bootstrap() {
   // -------------------------------------------------------------------
   // Start the server
   // -------------------------------------------------------------------
-  const port = process.env.PORT || 5000;
+  const port = process.env.PORT || 5001;
   await app.listen(port);
 
   Logger.log(

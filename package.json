@@ -19,7 +19,9 @@
     "seed:admin": "ts-node src/scripts/seed-admin.ts",
     "seed:odogwu": "ts-node src/scripts/seed-odogwu-laptops.ts",
     "seed:laptops": "ts-node src/scripts/seed-real-laptops.ts",
-    "update:store-logo": "ts-node src/scripts/update-store-logo.ts"
+    "seed:catalog": "ts-node src/scripts/seed-catalog.ts",
+    "update:store-logo": "ts-node src/scripts/update-store-logo.ts",
+    "update:store-brand": "ts-node src/scripts/update-store-brand.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

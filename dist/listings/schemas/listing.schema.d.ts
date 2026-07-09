@@ -31,6 +31,7 @@ export declare class Listing extends BaseSchema {
     description: string;
     condition: ItemCondition;
     category?: string;
+    subCategory?: string;
     tags: string[];
     quantity: number;
     media: MediaItem[];

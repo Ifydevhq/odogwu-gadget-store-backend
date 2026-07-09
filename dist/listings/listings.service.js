@@ -412,7 +412,7 @@ let ListingsService = class ListingsService {
         return savedListing;
     }
     async findMyListings(userId, queryDto) {
-        const { page, perPage, sort, search, status, type, condition, category, storeId, minPrice, maxPrice, buyableOnly, } = queryDto;
+        const { page, perPage, sort, search, status, type, condition, category, subCategory, storeId, minPrice, maxPrice, buyableOnly, } = queryDto;
         const filter = {
             userId: new mongoose_2.Types.ObjectId(userId),
             isDeleted: { $ne: true },
@@ -426,6 +426,11 @@ let ListingsService = class ListingsService {
         if (category) {
             filter.category = {
                 $regex: new RegExp(category.replace(/[-_]/g, '.*'), 'i'),
+            };
+        }
+        if (subCategory) {
+            filter.subCategory = {
+                $regex: new RegExp(subCategory.replace(/[-_]/g, '.*'), 'i'),
             };
         }
         if (storeId)
@@ -481,7 +486,7 @@ let ListingsService = class ListingsService {
         };
     }
     async findAll(queryDto) {
-        const { page, perPage, sort, search, type, status, condition, category, storeId, creatorId, minPrice, maxPrice, buyableOnly, } = queryDto;
+        const { page, perPage, sort, search, type, status, condition, category, subCategory, storeId, creatorId, minPrice, maxPrice, buyableOnly, } = queryDto;
         const filter = {
             isDeleted: { $ne: true },
         };
@@ -502,6 +507,11 @@ let ListingsService = class ListingsService {
         if (category) {
             filter.category = {
                 $regex: new RegExp(category.replace(/[-_]/g, '.*'), 'i'),
+            };
+        }
+        if (subCategory) {
+            filter.subCategory = {
+                $regex: new RegExp(subCategory.replace(/[-_]/g, '.*'), 'i'),
             };
         }
         if (storeId)
@@ -569,7 +579,7 @@ let ListingsService = class ListingsService {
         return this.findAll({ ...queryDto, creatorId });
     }
     async findAllAdmin(queryDto) {
-        const { page, perPage, sort, search, type, status, condition, category, storeId, creatorId, minPrice, maxPrice, } = queryDto;
+        const { page, perPage, sort, search, type, status, condition, category, subCategory, storeId, creatorId, minPrice, maxPrice, } = queryDto;
         const filter = {
             isDeleted: { $ne: true },
         };
@@ -581,6 +591,9 @@ let ListingsService = class ListingsService {
             filter.condition = condition;
         if (category) {
             filter['category.slug'] = { $regex: new RegExp(category, 'i') };
+        }
+        if (subCategory) {
+            filter.subCategory = { $regex: new RegExp(subCategory, 'i') };
         }
         if (storeId)
             filter.storeId = storeId;

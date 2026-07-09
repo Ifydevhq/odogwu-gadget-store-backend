@@ -111,6 +111,11 @@ export class Listing extends BaseSchema {
   @Prop({ type: String, default: null })
   category?: string;
 
+  // Sub-category slug (e.g. category = 'laptops', subCategory = 'hp').
+  // Lets buyers narrow a category down to a specific brand/type.
+  @Prop({ type: String, default: null })
+  subCategory?: string;
+
   @Prop({ type: [String], default: [] })
   tags: string[];
 
@@ -337,6 +342,7 @@ ListingSchema.index({ creatorId: 1, status: 1 }); // All products by a creator
 ListingSchema.index({ userId: 1 }); // All products by a user
 ListingSchema.index({ type: 1, status: 1 }); // Filter by selling type + status
 ListingSchema.index({ category: 1, status: 1 }); // Browse by category
+ListingSchema.index({ category: 1, subCategory: 1, status: 1 }); // Browse by category + brand/sub-category
 ListingSchema.index({ status: 1, createdAt: -1 }); // Latest listings
 ListingSchema.index({ itemName: 'text', description: 'text', tags: 'text' }); // Search
 ListingSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // Auto-expire (TTL index)

@@ -145,11 +145,20 @@ __decorate([
     __metadata("design:type", Array)
 ], CreateListingDto.prototype, "media", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: 'fashion' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: 'laptops' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateListingDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 'hp',
+        description: 'Sub-category slug (brand/type) within the category',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateListingDto.prototype, "subCategory", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         example: ['leather', 'handmade', 'bag'],
@@ -289,11 +298,20 @@ __decorate([
     __metadata("design:type", String)
 ], QueryListingsDto.prototype, "condition", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ example: 'fashion' }),
+    (0, swagger_1.ApiPropertyOptional)({ example: 'laptops' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], QueryListingsDto.prototype, "category", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 'hp',
+        description: 'Filter by sub-category slug (brand/type) within a category',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], QueryListingsDto.prototype, "subCategory", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Filter by store ID' }),
     (0, class_validator_1.IsString)(),

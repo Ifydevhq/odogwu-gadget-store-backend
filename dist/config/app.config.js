@@ -5,8 +5,8 @@ exports.default = (0, config_1.registerAs)('app', () => ({
     name: process.env.APP_NAME || 'Kraft',
     logoUrl: process.env.APP_LOGO_URL || null,
     env: process.env.NODE_ENV || 'development',
-    port: parseInt(process.env.PORT, 10) || 5000,
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    port: parseInt(process.env.PORT, 10) || 5001,
+    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001',
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
     jwt: {
         secret: process.env.JWT_SECRET || 'your-super-secret-key-change-me',

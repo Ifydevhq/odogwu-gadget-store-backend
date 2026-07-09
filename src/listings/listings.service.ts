@@ -745,6 +745,7 @@ export class ListingsService {
       type,
       condition,
       category,
+      subCategory,
       storeId,
       minPrice,
       maxPrice,
@@ -762,6 +763,11 @@ export class ListingsService {
     if (category) {
       filter.category = {
         $regex: new RegExp(category.replace(/[-_]/g, '.*'), 'i'),
+      };
+    }
+    if (subCategory) {
+      filter.subCategory = {
+        $regex: new RegExp(subCategory.replace(/[-_]/g, '.*'), 'i'),
       };
     }
     if (storeId) filter.storeId = new Types.ObjectId(storeId);
@@ -857,6 +863,7 @@ export class ListingsService {
       status,
       condition,
       category,
+      subCategory,
       storeId,
       creatorId,
       minPrice,
@@ -888,6 +895,11 @@ export class ListingsService {
     if (category) {
       filter.category = {
         $regex: new RegExp(category.replace(/[-_]/g, '.*'), 'i'),
+      };
+    }
+    if (subCategory) {
+      filter.subCategory = {
+        $regex: new RegExp(subCategory.replace(/[-_]/g, '.*'), 'i'),
       };
     }
     if (storeId) filter.storeId = new Types.ObjectId(storeId);
@@ -1006,6 +1018,7 @@ export class ListingsService {
       status,
       condition,
       category,
+      subCategory,
       storeId,
       creatorId,
       minPrice,
@@ -1022,6 +1035,9 @@ export class ListingsService {
     if (condition) filter.condition = condition;
     if (category) {
       filter['category.slug'] = { $regex: new RegExp(category, 'i') };
+    }
+    if (subCategory) {
+      filter.subCategory = { $regex: new RegExp(subCategory, 'i') };
     }
     if (storeId) filter.storeId = storeId;
     if (creatorId) filter.creatorId = creatorId;
