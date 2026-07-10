@@ -343,6 +343,110 @@ export class OrdersService {
     return order.save();
   }
 
+  // ─── Pay on Delivery Order ───────────────────────────────
+
+  /**
+   * Creates a Pay-on-Delivery (cash-on-delivery) order. Unlike the online
+   * flow, no payment is initialised: the order is created and immediately
+   * CONFIRMED (payment still PENDING until collected on delivery), and the
+   * owner + buyer are notified right away.
+   */
+  async createPayOnDeliveryOrder(
+    buyerId: string,
+    items: Parameters<OrdersService['createCartOrder']>[1],
+    shippingAddress: any,
+    buyerNote?: string,
+    receiptEmail?: string,
+    deliveryFee: number = 0,
+  ): Promise<OrderDocument> {
+    const order = await this.createCartOrder(
+      buyerId,
+      items,
+      shippingAddress,
+      buyerNote,
+      receiptEmail,
+      deliveryFee,
+    );
+
+    order.status = OrderStatus.Confirmed;
+    order.paymentStatus = PaymentStatus.Pending;
+    order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
+    const saved = await order.save();
+
+    await this.dispatchPayOnDeliveryNotifications(saved._id.toString());
+    return saved;
+  }
+
+  /** Buyer receipt + admin copy + owner WhatsApp + in-app alert for COD orders. */
+  private async dispatchPayOnDeliveryNotifications(orderId: string) {
+    const order = await this.orderModel
+      .findById(orderId)
+      .populate('buyerId', 'firstName lastName email')
+      .exec();
+    if (!order) return;
+
+    const buyer = order.buyerId as any;
+    const receiptTo = order.receiptEmail || buyer?.email;
+    const confirmationData = {
+      buyerName: buyer?.firstName || 'Customer',
+      orderNumber: order.orderNumber,
+      items: order.items.map((i) => ({
+        itemName: i.itemName,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+      })),
+      totalAmount: order.totalAmount,
+      shippingAddress: order.shippingAddress as any,
+    };
+
+    if (receiptTo) {
+      try {
+        await this.notificationsService.sendOrderConfirmation(
+          receiptTo,
+          confirmationData,
+        );
+      } catch (e) {
+        Logger.error(`❌ COD buyer email failed: ${e.message}`);
+      }
+    }
+
+    try {
+      await this.notificationsService.sendAdminOrderCopy(confirmationData);
+    } catch (e) {
+      Logger.error(`❌ COD admin copy failed: ${e.message}`);
+    }
+
+    try {
+      await this.notificationsService.sendOwnerOrderWhatsapp({
+        orderNumber: order.orderNumber,
+        buyerName:
+          `${buyer?.firstName || ''} ${buyer?.lastName || ''}`.trim() ||
+          'Customer',
+        phoneNumber: (order.shippingAddress as any)?.phoneNumber,
+        items: confirmationData.items,
+        totalAmount: order.totalAmount,
+        paymentLabel: 'Pay on Delivery',
+        shippingAddress: order.shippingAddress as any,
+        buyerNote: order.buyerNote,
+      });
+    } catch (e) {
+      Logger.error(`❌ COD owner WhatsApp failed: ${e.message}`);
+    }
+
+    try {
+      this.alertsService.createAlert({
+        userId: order.buyerId.toString(),
+        type: AlertType.OrderConfirmed,
+        title: 'Order Placed! 🛵',
+        message: `Your order #${order.orderNumber} has been placed. Pay with cash on delivery.`,
+        entityId: order._id,
+        entityType: 'order',
+      });
+    } catch {
+      /* non-fatal */
+    }
+  }
+
   // ─── Confirm Payment ─────────────────────────────────────
 
   /**
@@ -465,6 +569,22 @@ export class OrdersService {
         Logger.error(
           `❌ Failed to send admin copy: ${adminEmailError.message}`,
         );
+      }
+
+      // WhatsApp order alert to the store owner (paid online)
+      try {
+        await this.notificationsService.sendOwnerOrderWhatsapp({
+          orderNumber: order.orderNumber,
+          buyerName: `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim(),
+          phoneNumber: (order.shippingAddress as any)?.phoneNumber,
+          items: confirmationData.items,
+          totalAmount: order.totalAmount,
+          paymentLabel: `Paid online (${order.paymentInfo?.method || 'paystack'})`,
+          shippingAddress: order.shippingAddress as any,
+          buyerNote: order.buyerNote,
+        });
+      } catch (waError) {
+        Logger.error(`❌ Failed owner WhatsApp alert: ${waError.message}`);
       }
 
       // Email to each unique seller: "You made a sale!"

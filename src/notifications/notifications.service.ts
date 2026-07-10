@@ -27,6 +27,7 @@ import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
 import * as nodemailer from 'nodemailer';
 import * as dns from 'dns';
+import axios from 'axios';
 import {
   EmailBrand,
   verificationOtpTemplate,
@@ -51,6 +52,14 @@ export class NotificationsService {
   private readonly isConfigured: boolean;
   private readonly provider: EmailProvider;
   private readonly brand: EmailBrand;
+
+  // WhatsApp order alerts (to the store owner)
+  private readonly ownerWhatsapp: string;
+  private readonly whatsappProvider: 'cloud' | 'callmebot' | 'none';
+  private readonly whatsappCloudToken: string | null;
+  private readonly whatsappPhoneNumberId: string | null;
+  private readonly whatsappApiVersion: string;
+  private readonly callmebotApiKey: string | null;
 
   constructor(private configService: ConfigService) {
     const appName = this.configService.get<string>('app.name') || 'Kraft';
@@ -143,6 +152,143 @@ export class NotificationsService {
       this.logger.warn(`   Admin email: ${this.adminEmail || 'NOT SET'}`);
       this.logger.warn('══════════════════════════════════════════');
     }
+
+    // ── WhatsApp order alerts (owner) ─────────────────────────
+    this.ownerWhatsapp =
+      this.configService.get<string>('app.whatsapp.ownerNumber') ||
+      '+2348109362830';
+    this.whatsappCloudToken =
+      this.configService.get<string>('app.whatsapp.cloudToken') || null;
+    this.whatsappPhoneNumberId =
+      this.configService.get<string>('app.whatsapp.phoneNumberId') || null;
+    this.whatsappApiVersion =
+      this.configService.get<string>('app.whatsapp.apiVersion') || 'v21.0';
+    this.callmebotApiKey =
+      this.configService.get<string>('app.whatsapp.callmebotApiKey') || null;
+
+    if (this.whatsappCloudToken && this.whatsappPhoneNumberId) {
+      this.whatsappProvider = 'cloud';
+    } else if (this.callmebotApiKey) {
+      this.whatsappProvider = 'callmebot';
+    } else {
+      this.whatsappProvider = 'none';
+    }
+    this.logger.log(
+      `📱 WhatsApp order alerts → ${this.ownerWhatsapp} (provider: ${this.whatsappProvider})` +
+        (this.whatsappProvider === 'none'
+          ? ' — set WHATSAPP_CLOUD_TOKEN+WHATSAPP_PHONE_NUMBER_ID or CALLMEBOT_API_KEY to deliver'
+          : ''),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // WHATSAPP (store-owner order alerts)
+  // ═══════════════════════════════════════════════════════════
+
+  /** Normalise a number to digits only (providers don't want the leading +). */
+  private normaliseWhatsappNumber(num: string): string {
+    return (num || '').replace(/[^\d]/g, '');
+  }
+
+  /** Low-level WhatsApp text send. Never throws — logs on failure. */
+  private async sendWhatsappText(to: string, message: string): Promise<void> {
+    const number = this.normaliseWhatsappNumber(to);
+
+    if (this.whatsappProvider === 'none' || !number) {
+      this.logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      this.logger.warn('📱 WHATSAPP NOT SENT (no provider configured)');
+      this.logger.warn(`   To: ${to}`);
+      this.logger.warn(`   Message:\n${message}`);
+      this.logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      return;
+    }
+
+    try {
+      if (this.whatsappProvider === 'cloud') {
+        await axios.post(
+          `https://graph.facebook.com/${this.whatsappApiVersion}/${this.whatsappPhoneNumberId}/messages`,
+          {
+            messaging_product: 'whatsapp',
+            to: number,
+            type: 'text',
+            text: { preview_url: false, body: message },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.whatsappCloudToken}`,
+              'Content-Type': 'application/json',
+            },
+            timeout: 15000,
+          },
+        );
+        this.logger.log(`📱 WhatsApp order alert sent to ${to} via Cloud API`);
+      } else if (this.whatsappProvider === 'callmebot') {
+        await axios.get('https://api.callmebot.com/whatsapp.php', {
+          params: {
+            phone: number,
+            text: message,
+            apikey: this.callmebotApiKey,
+          },
+          timeout: 15000,
+        });
+        this.logger.log(`📱 WhatsApp order alert sent to ${to} via CallMeBot`);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `❌ Failed to send WhatsApp alert to ${to}: ${error?.response?.data?.error?.message || error.message}`,
+      );
+    }
+  }
+
+  /** Send a formatted order alert to the store owner's WhatsApp. */
+  async sendOwnerOrderWhatsapp(data: {
+    orderNumber: string;
+    buyerName: string;
+    phoneNumber?: string;
+    items: Array<{ itemName: string; quantity: number; unitPrice: number }>;
+    totalAmount: number;
+    paymentLabel: string; // e.g. 'Paid online (Paystack)' | 'Pay on Delivery'
+    shippingAddress?: {
+      fullName?: string;
+      address?: string;
+      city?: string;
+      state?: string;
+      country?: string;
+    };
+    buyerNote?: string;
+  }): Promise<void> {
+    const naira = (kobo: number) =>
+      `₦${((kobo || 0) / 100).toLocaleString('en-NG')}`;
+
+    const itemLines = data.items
+      .map((i) => `• ${i.quantity} × ${i.itemName} — ${naira(i.unitPrice)}`)
+      .join('\n');
+
+    const addr = data.shippingAddress;
+    const addressLine = addr
+      ? [addr.address, addr.city, addr.state, addr.country]
+          .filter(Boolean)
+          .join(', ')
+      : '';
+
+    const message = [
+      `🛒 *New Order — ${this.brand.appName}*`,
+      `Order: *${data.orderNumber}*`,
+      `Payment: ${data.paymentLabel}`,
+      `Total: *${naira(data.totalAmount)}*`,
+      '',
+      '*Items:*',
+      itemLines,
+      '',
+      `Customer: ${data.buyerName}`,
+      data.phoneNumber ? `Phone: ${data.phoneNumber}` : '',
+      addressLine ? `Deliver to: ${addressLine}` : '',
+      data.buyerNote ? `Note: ${data.buyerNote}` : '',
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
+
+    await this.sendWhatsappText(this.ownerWhatsapp, message);
   }
 
   // ─── Core Send Method ────────────────────────────────────

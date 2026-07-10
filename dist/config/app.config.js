@@ -47,6 +47,13 @@ exports.default = (0, config_1.registerAs)('app', () => ({
             `${process.env.APP_NAME || 'Kraft'} <noreply@kraft.ng>`,
     },
     adminEmail: process.env.ADMIN_EMAIL || null,
+    whatsapp: {
+        ownerNumber: process.env.OWNER_WHATSAPP_NUMBER || '+2348109362830',
+        cloudToken: process.env.WHATSAPP_CLOUD_TOKEN || null,
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || null,
+        apiVersion: process.env.WHATSAPP_API_VERSION || 'v21.0',
+        callmebotApiKey: process.env.CALLMEBOT_API_KEY || null,
+    },
     listing: {
         freeListing: process.env.FREE_LISTING === 'true',
         noCommission: process.env.NO_COMMISSION === 'true',

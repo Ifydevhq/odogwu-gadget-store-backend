@@ -16,6 +16,7 @@ const config_1 = require("@nestjs/config");
 const resend_1 = require("resend");
 const nodemailer = require("nodemailer");
 const dns = require("dns");
+const axios_1 = require("axios");
 const email_templates_1 = require("./templates/email-templates");
 let NotificationsService = NotificationsService_1 = class NotificationsService {
     constructor(configService) {
@@ -98,6 +99,104 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             this.logger.warn(`   Admin email: ${this.adminEmail || 'NOT SET'}`);
             this.logger.warn('══════════════════════════════════════════');
         }
+        this.ownerWhatsapp =
+            this.configService.get('app.whatsapp.ownerNumber') ||
+                '+2348109362830';
+        this.whatsappCloudToken =
+            this.configService.get('app.whatsapp.cloudToken') || null;
+        this.whatsappPhoneNumberId =
+            this.configService.get('app.whatsapp.phoneNumberId') || null;
+        this.whatsappApiVersion =
+            this.configService.get('app.whatsapp.apiVersion') || 'v21.0';
+        this.callmebotApiKey =
+            this.configService.get('app.whatsapp.callmebotApiKey') || null;
+        if (this.whatsappCloudToken && this.whatsappPhoneNumberId) {
+            this.whatsappProvider = 'cloud';
+        }
+        else if (this.callmebotApiKey) {
+            this.whatsappProvider = 'callmebot';
+        }
+        else {
+            this.whatsappProvider = 'none';
+        }
+        this.logger.log(`📱 WhatsApp order alerts → ${this.ownerWhatsapp} (provider: ${this.whatsappProvider})` +
+            (this.whatsappProvider === 'none'
+                ? ' — set WHATSAPP_CLOUD_TOKEN+WHATSAPP_PHONE_NUMBER_ID or CALLMEBOT_API_KEY to deliver'
+                : ''));
+    }
+    normaliseWhatsappNumber(num) {
+        return (num || '').replace(/[^\d]/g, '');
+    }
+    async sendWhatsappText(to, message) {
+        const number = this.normaliseWhatsappNumber(to);
+        if (this.whatsappProvider === 'none' || !number) {
+            this.logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            this.logger.warn('📱 WHATSAPP NOT SENT (no provider configured)');
+            this.logger.warn(`   To: ${to}`);
+            this.logger.warn(`   Message:\n${message}`);
+            this.logger.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            return;
+        }
+        try {
+            if (this.whatsappProvider === 'cloud') {
+                await axios_1.default.post(`https://graph.facebook.com/${this.whatsappApiVersion}/${this.whatsappPhoneNumberId}/messages`, {
+                    messaging_product: 'whatsapp',
+                    to: number,
+                    type: 'text',
+                    text: { preview_url: false, body: message },
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${this.whatsappCloudToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 15000,
+                });
+                this.logger.log(`📱 WhatsApp order alert sent to ${to} via Cloud API`);
+            }
+            else if (this.whatsappProvider === 'callmebot') {
+                await axios_1.default.get('https://api.callmebot.com/whatsapp.php', {
+                    params: {
+                        phone: number,
+                        text: message,
+                        apikey: this.callmebotApiKey,
+                    },
+                    timeout: 15000,
+                });
+                this.logger.log(`📱 WhatsApp order alert sent to ${to} via CallMeBot`);
+            }
+        }
+        catch (error) {
+            this.logger.error(`❌ Failed to send WhatsApp alert to ${to}: ${error?.response?.data?.error?.message || error.message}`);
+        }
+    }
+    async sendOwnerOrderWhatsapp(data) {
+        const naira = (kobo) => `₦${((kobo || 0) / 100).toLocaleString('en-NG')}`;
+        const itemLines = data.items
+            .map((i) => `• ${i.quantity} × ${i.itemName} — ${naira(i.unitPrice)}`)
+            .join('\n');
+        const addr = data.shippingAddress;
+        const addressLine = addr
+            ? [addr.address, addr.city, addr.state, addr.country]
+                .filter(Boolean)
+                .join(', ')
+            : '';
+        const message = [
+            `🛒 *New Order — ${this.brand.appName}*`,
+            `Order: *${data.orderNumber}*`,
+            `Payment: ${data.paymentLabel}`,
+            `Total: *${naira(data.totalAmount)}*`,
+            '',
+            '*Items:*',
+            itemLines,
+            '',
+            `Customer: ${data.buyerName}`,
+            data.phoneNumber ? `Phone: ${data.phoneNumber}` : '',
+            addressLine ? `Deliver to: ${addressLine}` : '',
+            data.buyerNote ? `Note: ${data.buyerNote}` : '',
+        ]
+            .filter((line) => line !== '')
+            .join('\n');
+        await this.sendWhatsappText(this.ownerWhatsapp, message);
     }
     async send(to, subject, html, options) {
         if (!this.isConfigured) {

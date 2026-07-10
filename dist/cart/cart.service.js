@@ -279,6 +279,25 @@ let CartService = CartService_1 = class CartService {
         }
         const itemsTotal = validItems.reduce((sum, i) => sum + i.totalPrice, 0);
         const grandTotal = itemsTotal + deliveryFee;
+        if (paymentMethod === 'pay_on_delivery') {
+            const order = await this.ordersService.createPayOnDeliveryOrder(userId, validItems, shippingAddress, buyerNote, email, deliveryFee);
+            await this.removeCheckedOutItems(userId, validItems.map((i) => i.listingId));
+            this.logger.log(`Pay-on-delivery order created: ${order.orderNumber} ` +
+                `(${validItems.length} items, total ${grandTotal})`);
+            return {
+                paymentMethod: 'pay_on_delivery',
+                codOrder: true,
+                order: {
+                    _id: order._id,
+                    orderNumber: order.orderNumber,
+                    totalAmount: order.totalAmount,
+                    itemCount: order.items.length,
+                },
+                grandTotal,
+                itemCount: validItems.length,
+                skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
+            };
+        }
         const itemsSummary = validItems.map((i) => ({
             itemName: i.itemName,
             quantity: i.quantity,

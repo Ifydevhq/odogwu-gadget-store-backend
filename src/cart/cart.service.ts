@@ -359,7 +359,7 @@ export class CartService {
     buyerNote?: string,
     callbackUrl?: string,
     deliveryFee: number = 0,
-    paymentMethod: 'paystack' | 'opay' = 'paystack',
+    paymentMethod: 'paystack' | 'opay' | 'pay_on_delivery' = 'paystack',
   ) {
     // 1. Get and validate cart
     const cart = await this.cartModel
@@ -466,6 +466,43 @@ export class CartService {
     // 2. Calculate grand total (items + delivery fee)
     const itemsTotal = validItems.reduce((sum, i) => sum + i.totalPrice, 0);
     const grandTotal = itemsTotal + deliveryFee;
+
+    // ─── Pay on Delivery — no online payment, create the order now ───
+    if (paymentMethod === 'pay_on_delivery') {
+      const order = await this.ordersService.createPayOnDeliveryOrder(
+        userId,
+        validItems,
+        shippingAddress,
+        buyerNote,
+        email,
+        deliveryFee,
+      );
+
+      // Remove the checked-out items from the cart immediately.
+      await this.removeCheckedOutItems(
+        userId,
+        validItems.map((i) => i.listingId),
+      );
+
+      this.logger.log(
+        `Pay-on-delivery order created: ${order.orderNumber} ` +
+          `(${validItems.length} items, total ${grandTotal})`,
+      );
+
+      return {
+        paymentMethod: 'pay_on_delivery',
+        codOrder: true,
+        order: {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          itemCount: order.items.length,
+        },
+        grandTotal,
+        itemCount: validItems.length,
+        skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
+      };
+    }
 
     // 3. Initialize payment via chosen provider
     const itemsSummary = validItems.map((i) => ({

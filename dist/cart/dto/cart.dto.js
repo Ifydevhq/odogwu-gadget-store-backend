@@ -135,11 +135,11 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
         description: 'Payment method (defaults to paystack)',
-        enum: ['paystack', 'opay'],
+        enum: ['paystack', 'opay', 'pay_on_delivery'],
     }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
-    (0, class_validator_1.IsIn)(['paystack', 'opay']),
+    (0, class_validator_1.IsIn)(['paystack', 'opay', 'pay_on_delivery']),
     __metadata("design:type", String)
 ], CheckoutCartDto.prototype, "paymentMethod", void 0);
 //# sourceMappingURL=cart.dto.js.map

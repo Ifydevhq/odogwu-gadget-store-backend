@@ -40,6 +40,13 @@ declare const _default: (() => {
         from: string;
     };
     adminEmail: string;
+    whatsapp: {
+        ownerNumber: string;
+        cloudToken: string;
+        phoneNumberId: string;
+        apiVersion: string;
+        callmebotApiKey: string;
+    };
     listing: {
         freeListing: boolean;
         noCommission: boolean;
@@ -93,6 +100,13 @@ declare const _default: (() => {
         from: string;
     };
     adminEmail: string;
+    whatsapp: {
+        ownerNumber: string;
+        cloudToken: string;
+        phoneNumberId: string;
+        apiVersion: string;
+        callmebotApiKey: string;
+    };
     listing: {
         freeListing: boolean;
         noCommission: boolean;

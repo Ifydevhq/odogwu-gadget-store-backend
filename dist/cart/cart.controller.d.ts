@@ -52,6 +52,20 @@ export declare class CartController {
         issues: any[];
     }>;
     checkout(req: any, dto: CheckoutCartDto): Promise<{
+        paymentMethod: string;
+        codOrder: boolean;
+        order: {
+            _id: any;
+            orderNumber: string;
+            totalAmount: number;
+            itemCount: number;
+        };
+        grandTotal: any;
+        itemCount: number;
+        skippedItems: any[];
+        sessionId?: undefined;
+        payment?: undefined;
+    } | {
         sessionId: any;
         paymentMethod: "paystack" | "opay";
         payment: {
@@ -62,5 +76,8 @@ export declare class CartController {
         };
         itemCount: number;
         skippedItems: any[];
+        codOrder?: undefined;
+        order?: undefined;
+        grandTotal?: undefined;
     }>;
 }

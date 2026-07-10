@@ -109,10 +109,10 @@ export class CheckoutCartDto {
 
   @ApiPropertyOptional({
     description: 'Payment method (defaults to paystack)',
-    enum: ['paystack', 'opay'],
+    enum: ['paystack', 'opay', 'pay_on_delivery'],
   })
   @IsOptional()
   @IsString()
-  @IsIn(['paystack', 'opay'])
-  paymentMethod?: 'paystack' | 'opay';
+  @IsIn(['paystack', 'opay', 'pay_on_delivery'])
+  paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery';
 }

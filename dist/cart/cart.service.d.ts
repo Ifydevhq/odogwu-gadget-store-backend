@@ -57,7 +57,21 @@ export declare class CartService {
         totalItems: number;
         issues: any[];
     }>;
-    checkout(userId: string, email: string, shippingAddress: any, listingIds?: string[], buyerNote?: string, callbackUrl?: string, deliveryFee?: number, paymentMethod?: 'paystack' | 'opay'): Promise<{
+    checkout(userId: string, email: string, shippingAddress: any, listingIds?: string[], buyerNote?: string, callbackUrl?: string, deliveryFee?: number, paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery'): Promise<{
+        paymentMethod: string;
+        codOrder: boolean;
+        order: {
+            _id: any;
+            orderNumber: string;
+            totalAmount: number;
+            itemCount: number;
+        };
+        grandTotal: any;
+        itemCount: number;
+        skippedItems: any[];
+        sessionId?: undefined;
+        payment?: undefined;
+    } | {
         sessionId: any;
         paymentMethod: "paystack" | "opay";
         payment: {
@@ -68,6 +82,9 @@ export declare class CartService {
         };
         itemCount: number;
         skippedItems: any[];
+        codOrder?: undefined;
+        order?: undefined;
+        grandTotal?: undefined;
     }>;
     fulfillCheckoutSession(sessionId: string, paymentReference: string, paystackReference: string): Promise<{
         alreadyFulfilled: boolean;

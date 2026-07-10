@@ -9,7 +9,35 @@ export declare class NotificationsService {
     private readonly isConfigured;
     private readonly provider;
     private readonly brand;
+    private readonly ownerWhatsapp;
+    private readonly whatsappProvider;
+    private readonly whatsappCloudToken;
+    private readonly whatsappPhoneNumberId;
+    private readonly whatsappApiVersion;
+    private readonly callmebotApiKey;
     constructor(configService: ConfigService);
+    private normaliseWhatsappNumber;
+    private sendWhatsappText;
+    sendOwnerOrderWhatsapp(data: {
+        orderNumber: string;
+        buyerName: string;
+        phoneNumber?: string;
+        items: Array<{
+            itemName: string;
+            quantity: number;
+            unitPrice: number;
+        }>;
+        totalAmount: number;
+        paymentLabel: string;
+        shippingAddress?: {
+            fullName?: string;
+            address?: string;
+            city?: string;
+            state?: string;
+            country?: string;
+        };
+        buyerNote?: string;
+    }): Promise<void>;
     private send;
     sendRawEmail(to: string, subject: string, html: string): Promise<void>;
     sendVerificationOtp(email: string, firstName: string, otp: string): Promise<void>;

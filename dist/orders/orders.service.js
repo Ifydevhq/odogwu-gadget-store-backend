@@ -181,6 +181,78 @@ let OrdersService = class OrdersService {
         });
         return order.save();
     }
+    async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0) {
+        const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee);
+        order.status = contants_1.OrderStatus.Confirmed;
+        order.paymentStatus = contants_1.PaymentStatus.Pending;
+        order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
+        const saved = await order.save();
+        await this.dispatchPayOnDeliveryNotifications(saved._id.toString());
+        return saved;
+    }
+    async dispatchPayOnDeliveryNotifications(orderId) {
+        const order = await this.orderModel
+            .findById(orderId)
+            .populate('buyerId', 'firstName lastName email')
+            .exec();
+        if (!order)
+            return;
+        const buyer = order.buyerId;
+        const receiptTo = order.receiptEmail || buyer?.email;
+        const confirmationData = {
+            buyerName: buyer?.firstName || 'Customer',
+            orderNumber: order.orderNumber,
+            items: order.items.map((i) => ({
+                itemName: i.itemName,
+                quantity: i.quantity,
+                unitPrice: i.unitPrice,
+            })),
+            totalAmount: order.totalAmount,
+            shippingAddress: order.shippingAddress,
+        };
+        if (receiptTo) {
+            try {
+                await this.notificationsService.sendOrderConfirmation(receiptTo, confirmationData);
+            }
+            catch (e) {
+                common_1.Logger.error(`❌ COD buyer email failed: ${e.message}`);
+            }
+        }
+        try {
+            await this.notificationsService.sendAdminOrderCopy(confirmationData);
+        }
+        catch (e) {
+            common_1.Logger.error(`❌ COD admin copy failed: ${e.message}`);
+        }
+        try {
+            await this.notificationsService.sendOwnerOrderWhatsapp({
+                orderNumber: order.orderNumber,
+                buyerName: `${buyer?.firstName || ''} ${buyer?.lastName || ''}`.trim() ||
+                    'Customer',
+                phoneNumber: order.shippingAddress?.phoneNumber,
+                items: confirmationData.items,
+                totalAmount: order.totalAmount,
+                paymentLabel: 'Pay on Delivery',
+                shippingAddress: order.shippingAddress,
+                buyerNote: order.buyerNote,
+            });
+        }
+        catch (e) {
+            common_1.Logger.error(`❌ COD owner WhatsApp failed: ${e.message}`);
+        }
+        try {
+            this.alertsService.createAlert({
+                userId: order.buyerId.toString(),
+                type: contants_2.AlertType.OrderConfirmed,
+                title: 'Order Placed! 🛵',
+                message: `Your order #${order.orderNumber} has been placed. Pay with cash on delivery.`,
+                entityId: order._id,
+                entityType: 'order',
+            });
+        }
+        catch {
+        }
+    }
     async confirmPayment(orderId, paymentReference, paystackReference) {
         const order = await this.orderModel.findById(orderId).exec();
         if (!order) {
@@ -253,6 +325,21 @@ let OrdersService = class OrdersService {
             }
             catch (adminEmailError) {
                 common_1.Logger.error(`❌ Failed to send admin copy: ${adminEmailError.message}`);
+            }
+            try {
+                await this.notificationsService.sendOwnerOrderWhatsapp({
+                    orderNumber: order.orderNumber,
+                    buyerName: `${buyer.firstName || ''} ${buyer.lastName || ''}`.trim(),
+                    phoneNumber: order.shippingAddress?.phoneNumber,
+                    items: confirmationData.items,
+                    totalAmount: order.totalAmount,
+                    paymentLabel: `Paid online (${order.paymentInfo?.method || 'paystack'})`,
+                    shippingAddress: order.shippingAddress,
+                    buyerNote: order.buyerNote,
+                });
+            }
+            catch (waError) {
+                common_1.Logger.error(`❌ Failed owner WhatsApp alert: ${waError.message}`);
             }
             const sellerItemsMap = new Map();
             for (const item of order.items) {
