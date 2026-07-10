@@ -373,7 +373,13 @@ export class OrdersService {
     order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
     const saved = await order.save();
 
-    await this.dispatchPayOnDeliveryNotifications(saved._id.toString());
+    // Notifications must never break order creation.
+    await this.dispatchPayOnDeliveryNotifications(saved._id.toString()).catch(
+      (e) =>
+        Logger.error(
+          `COD notifications failed for ${saved.orderNumber}: ${e.message}`,
+        ),
+    );
     return saved;
   }
 
@@ -486,7 +492,8 @@ export class OrdersService {
     const updatedOrder = await order.save();
 
     // Update listing stock per item
-    for (const item of order.items) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    for (const _item of order.items) {
       // Decrement quantity
       // If quantity reaches 0, the listing should be marked as sold
       // (handled in a more robust way with the listings service later)
@@ -655,20 +662,23 @@ export class OrdersService {
     }
 
     // ─── In-app alerts ──────────────────────────────────────────
-    const itemsSummary = order.items.length === 1
-      ? order.items[0].itemName
-      : `${order.items.length} items`;
+    const itemsSummary =
+      order.items.length === 1
+        ? order.items[0].itemName
+        : `${order.items.length} items`;
 
     // Alert buyer: order confirmed
-    this.alertsService.createAlert({
-      userId: order.buyerId.toString(),
-      type: AlertType.OrderConfirmed,
-      title: 'Order Confirmed! ✅',
-      message: `Your order #${order.orderNumber} for ${itemsSummary} has been confirmed. We'll notify you when it's being processed.`,
-      entityId: order._id,
-      entityType: 'order',
-      metadata: { orderNumber: order.orderNumber },
-    }).catch(() => {});
+    this.alertsService
+      .createAlert({
+        userId: order.buyerId.toString(),
+        type: AlertType.OrderConfirmed,
+        title: 'Order Confirmed! ✅',
+        message: `Your order #${order.orderNumber} for ${itemsSummary} has been confirmed. We'll notify you when it's being processed.`,
+        entityId: order._id,
+        entityType: 'order',
+        metadata: { orderNumber: order.orderNumber },
+      })
+      .catch(() => {});
 
     // Alert each seller: new order received
     const alertedSellers = new Set<string>();
@@ -676,15 +686,17 @@ export class OrdersService {
       const sellerId = (item as any).sellerId?.toString();
       if (sellerId && !alertedSellers.has(sellerId)) {
         alertedSellers.add(sellerId);
-        this.alertsService.createAlert({
-          userId: sellerId,
-          type: AlertType.NewOrderReceived,
-          title: 'New Order Received! 🎉',
-          message: `You received a new order #${order.orderNumber}. Check your orders for details.`,
-          entityId: order._id,
-          entityType: 'order',
-          metadata: { orderNumber: order.orderNumber },
-        }).catch(() => {});
+        this.alertsService
+          .createAlert({
+            userId: sellerId,
+            type: AlertType.NewOrderReceived,
+            title: 'New Order Received! 🎉',
+            message: `You received a new order #${order.orderNumber}. Check your orders for details.`,
+            entityId: order._id,
+            entityType: 'order',
+            metadata: { orderNumber: order.orderNumber },
+          })
+          .catch(() => {});
       }
     }
 
@@ -876,7 +888,10 @@ export class OrdersService {
     }
 
     // ─── In-app alert for status change ─────────────────────
-    const statusAlertMap: Record<string, { type: AlertType; title: string; message: string }> = {
+    const statusAlertMap: Record<
+      string,
+      { type: AlertType; title: string; message: string }
+    > = {
       [OrderStatus.Processing]: {
         type: AlertType.OrderProcessing,
         title: 'Order Being Processed 📦',
@@ -906,13 +921,15 @@ export class OrdersService {
 
     const alertConfig = statusAlertMap[status];
     if (alertConfig) {
-      this.alertsService.createAlert({
-        userId: order.buyerId.toString(),
-        ...alertConfig,
-        entityId: order._id,
-        entityType: 'order',
-        metadata: { orderNumber: order.orderNumber, status },
-      }).catch(() => {});
+      this.alertsService
+        .createAlert({
+          userId: order.buyerId.toString(),
+          ...alertConfig,
+          entityId: order._id,
+          entityType: 'order',
+          metadata: { orderNumber: order.orderNumber, status },
+        })
+        .catch(() => {});
     }
 
     return savedOrder;

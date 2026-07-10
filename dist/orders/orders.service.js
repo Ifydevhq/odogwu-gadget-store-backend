@@ -187,7 +187,7 @@ let OrdersService = class OrdersService {
         order.paymentStatus = contants_1.PaymentStatus.Pending;
         order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
         const saved = await order.save();
-        await this.dispatchPayOnDeliveryNotifications(saved._id.toString());
+        await this.dispatchPayOnDeliveryNotifications(saved._id.toString()).catch((e) => common_1.Logger.error(`COD notifications failed for ${saved.orderNumber}: ${e.message}`));
         return saved;
     }
     async dispatchPayOnDeliveryNotifications(orderId) {
@@ -271,7 +271,7 @@ let OrdersService = class OrdersService {
             status: 'success',
         };
         const updatedOrder = await order.save();
-        for (const item of order.items) {
+        for (const _item of order.items) {
         }
         const processedStores = new Set();
         const processedCreators = new Set();
@@ -387,7 +387,8 @@ let OrdersService = class OrdersService {
         const itemsSummary = order.items.length === 1
             ? order.items[0].itemName
             : `${order.items.length} items`;
-        this.alertsService.createAlert({
+        this.alertsService
+            .createAlert({
             userId: order.buyerId.toString(),
             type: contants_2.AlertType.OrderConfirmed,
             title: 'Order Confirmed! ✅',
@@ -395,13 +396,15 @@ let OrdersService = class OrdersService {
             entityId: order._id,
             entityType: 'order',
             metadata: { orderNumber: order.orderNumber },
-        }).catch(() => { });
+        })
+            .catch(() => { });
         const alertedSellers = new Set();
         for (const item of order.items) {
             const sellerId = item.sellerId?.toString();
             if (sellerId && !alertedSellers.has(sellerId)) {
                 alertedSellers.add(sellerId);
-                this.alertsService.createAlert({
+                this.alertsService
+                    .createAlert({
                     userId: sellerId,
                     type: contants_2.AlertType.NewOrderReceived,
                     title: 'New Order Received! 🎉',
@@ -409,7 +412,8 @@ let OrdersService = class OrdersService {
                     entityId: order._id,
                     entityType: 'order',
                     metadata: { orderNumber: order.orderNumber },
-                }).catch(() => { });
+                })
+                    .catch(() => { });
             }
         }
         return updatedOrder;
@@ -551,13 +555,15 @@ let OrdersService = class OrdersService {
         };
         const alertConfig = statusAlertMap[status];
         if (alertConfig) {
-            this.alertsService.createAlert({
+            this.alertsService
+                .createAlert({
                 userId: order.buyerId.toString(),
                 ...alertConfig,
                 entityId: order._id,
                 entityType: 'order',
                 metadata: { orderNumber: order.orderNumber, status },
-            }).catch(() => { });
+            })
+                .catch(() => { });
         }
         return savedOrder;
     }
