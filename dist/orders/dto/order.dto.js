@@ -102,13 +102,26 @@ class UpdateOrderStatusDto {
 }
 exports.UpdateOrderStatusDto = UpdateOrderStatusDto;
 __decorate([
-    (0, swagger_1.ApiProperty)({
+    (0, swagger_1.ApiPropertyOptional)({
         enum: contants_1.OrderStatus,
-        description: 'New order status',
+        description: 'New order status. Optional so an admin can record a payment without ' +
+            'also moving the order along the fulfilment track.',
     }),
     (0, class_validator_1.IsEnum)(contants_1.OrderStatus),
+    (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], UpdateOrderStatusDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        enum: contants_1.PaymentStatus,
+        description: 'New payment status. Setting this to "success" is how a pay-on-delivery ' +
+            'order is settled once cash has been collected — it stamps paidAt and ' +
+            'sends the buyer their receipt.',
+    }),
+    (0, class_validator_1.IsEnum)(contants_1.PaymentStatus),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], UpdateOrderStatusDto.prototype, "paymentStatus", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Admin note about this status change' }),
     (0, class_validator_1.IsString)(),

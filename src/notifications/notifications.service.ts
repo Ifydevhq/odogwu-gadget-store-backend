@@ -34,6 +34,7 @@ import {
   welcomeTemplate,
   passwordResetTemplate,
   orderConfirmationTemplate,
+  orderPlacedOnDeliveryTemplate,
   newOrderAlertTemplate,
   orderStatusUpdateTemplate,
   listingApprovedTemplate,
@@ -422,6 +423,30 @@ export class NotificationsService {
     },
   ): Promise<void> {
     const { subject, html } = orderConfirmationTemplate(this.brand, data);
+    await this.send(buyerEmail, subject, html);
+  }
+
+  /**
+   * Acknowledgement for a pay-on-delivery order. NOT a receipt — nothing has
+   * been paid yet, so this must never claim the order is confirmed or paid.
+   * The receipt goes out from `markPaymentReceived` once payment is recorded.
+   */
+  async sendOrderPlacedOnDelivery(
+    buyerEmail: string,
+    data: {
+      buyerName: string;
+      orderNumber: string;
+      items: Array<{ itemName: string; quantity: number; unitPrice: number }>;
+      totalAmount: number;
+      shippingAddress: {
+        fullName: string;
+        address: string;
+        city: string;
+        state: string;
+      };
+    },
+  ): Promise<void> {
+    const { subject, html } = orderPlacedOnDeliveryTemplate(this.brand, data);
     await this.send(buyerEmail, subject, html);
   }
 

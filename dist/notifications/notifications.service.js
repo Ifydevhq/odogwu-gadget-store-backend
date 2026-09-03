@@ -284,6 +284,10 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         const { subject, html } = (0, email_templates_1.orderConfirmationTemplate)(this.brand, data);
         await this.send(buyerEmail, subject, html);
     }
+    async sendOrderPlacedOnDelivery(buyerEmail, data) {
+        const { subject, html } = (0, email_templates_1.orderPlacedOnDeliveryTemplate)(this.brand, data);
+        await this.send(buyerEmail, subject, html);
+    }
     async sendAdminOrderCopy(data) {
         if (!this.adminEmail)
             return;

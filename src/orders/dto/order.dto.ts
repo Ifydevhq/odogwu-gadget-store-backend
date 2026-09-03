@@ -104,12 +104,26 @@ export class CreateOrderDto {
 // ═══════════════════════════════════════════════════════════════
 
 export class UpdateOrderStatusDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     enum: OrderStatus,
-    description: 'New order status',
+    description:
+      'New order status. Optional so an admin can record a payment without ' +
+      'also moving the order along the fulfilment track.',
   })
   @IsEnum(OrderStatus)
-  status: OrderStatus;
+  @IsOptional()
+  status?: OrderStatus;
+
+  @ApiPropertyOptional({
+    enum: PaymentStatus,
+    description:
+      'New payment status. Setting this to "success" is how a pay-on-delivery ' +
+      'order is settled once cash has been collected — it stamps paidAt and ' +
+      'sends the buyer their receipt.',
+  })
+  @IsEnum(PaymentStatus)
+  @IsOptional()
+  paymentStatus?: PaymentStatus;
 
   @ApiPropertyOptional({ description: 'Admin note about this status change' })
   @IsString()

@@ -16,7 +16,8 @@ export declare class CreateOrderDto {
     buyerNote?: string;
 }
 export declare class UpdateOrderStatusDto {
-    status: OrderStatus;
+    status?: OrderStatus;
+    paymentStatus?: PaymentStatus;
     adminNote?: string;
     cancellationReason?: string;
     carrier?: string;

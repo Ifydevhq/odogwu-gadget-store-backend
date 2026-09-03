@@ -4,6 +4,7 @@ exports.verificationOtpTemplate = verificationOtpTemplate;
 exports.welcomeTemplate = welcomeTemplate;
 exports.passwordResetTemplate = passwordResetTemplate;
 exports.orderConfirmationTemplate = orderConfirmationTemplate;
+exports.orderPlacedOnDeliveryTemplate = orderPlacedOnDeliveryTemplate;
 exports.newOrderAlertTemplate = newOrderAlertTemplate;
 exports.orderStatusUpdateTemplate = orderStatusUpdateTemplate;
 exports.listingApprovedTemplate = listingApprovedTemplate;
@@ -199,6 +200,64 @@ function orderConfirmationTemplate(brand, data) {
       <hr style="${styles.divider}">
 
       <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Shipping To</p>
+      <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6;">
+        <strong>${data.shippingAddress.fullName}</strong><br>
+        ${data.shippingAddress.address}<br>
+        ${data.shippingAddress.city}, ${data.shippingAddress.state}
+      </p>
+    `),
+    };
+}
+function orderPlacedOnDeliveryTemplate(brand, data) {
+    const itemRows = data.items
+        .map((item) => `
+        <tr>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #374151;">${item.itemName}</td>
+          <td style="padding: 14px 8px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280; text-align: center;">${item.quantity}</td>
+          <td style="padding: 14px 8px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #6b7280; text-align: right;">${formatPrice(item.unitPrice)}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; color: #1a1a2e; text-align: right; font-weight: 600;">${formatPrice(item.unitPrice * item.quantity)}</td>
+        </tr>`)
+        .join('');
+    return {
+        subject: `Order received — ${data.orderNumber}`,
+        html: baseLayout(brand, `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="${styles.badge}">Order Received</span>
+      </div>
+
+      <h2 style="${styles.h2}; text-align: center;">Thanks — we have your order</h2>
+      <p style="${styles.p}; text-align: center;">Hi ${data.buyerName}, we have received your order and our team will reach out shortly to confirm it and arrange delivery.</p>
+
+      <div style="${styles.infoBox}; text-align: center;">
+        <p style="margin: 0; font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px;">Order Number</p>
+        <p style="margin: 4px 0 0 0; font-size: 20px; font-weight: 700; color: #1a1a2e;">${data.orderNumber}</p>
+      </div>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
+        <thead>
+          <tr style="background: #f8f9fc;">
+            <th style="padding: 10px 12px; text-align: left; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Item</th>
+            <th style="padding: 10px 8px; text-align: center; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Qty</th>
+            <th style="padding: 10px 8px; text-align: right; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Price</th>
+            <th style="padding: 10px 12px; text-align: right; font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+        </tbody>
+      </table>
+
+      <div style="text-align: right; padding: 16px 12px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; margin: 0 0 24px 0;">
+        <span style="font-size: 13px; color: #9a3412; text-transform: uppercase;">Amount due on delivery</span>
+        <br>
+        <span style="font-size: 24px; font-weight: 800; color: #1a1a2e;">${formatPrice(data.totalAmount)}</span>
+      </div>
+
+      <p style="${styles.p}">Please have the exact amount ready when your order arrives. You will get a receipt by email once payment has been received.</p>
+
+      <hr style="${styles.divider}">
+
+      <p style="margin: 0 0 8px 0; font-size: 13px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Delivering To</p>
       <p style="margin: 0; font-size: 15px; color: #374151; line-height: 1.6;">
         <strong>${data.shippingAddress.fullName}</strong><br>
         ${data.shippingAddress.address}<br>

@@ -59,6 +59,22 @@ export declare class NotificationsService {
             state: string;
         };
     }): Promise<void>;
+    sendOrderPlacedOnDelivery(buyerEmail: string, data: {
+        buyerName: string;
+        orderNumber: string;
+        items: Array<{
+            itemName: string;
+            quantity: number;
+            unitPrice: number;
+        }>;
+        totalAmount: number;
+        shippingAddress: {
+            fullName: string;
+            address: string;
+            city: string;
+            state: string;
+        };
+    }): Promise<void>;
     sendAdminOrderCopy(data: {
         buyerName: string;
         orderNumber: string;

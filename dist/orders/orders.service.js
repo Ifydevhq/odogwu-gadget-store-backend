@@ -183,12 +183,47 @@ let OrdersService = class OrdersService {
     }
     async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0) {
         const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee);
-        order.status = contants_1.OrderStatus.Confirmed;
+        order.status = contants_1.OrderStatus.Pending;
         order.paymentStatus = contants_1.PaymentStatus.Pending;
         order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
         const saved = await order.save();
         await this.dispatchPayOnDeliveryNotifications(saved._id.toString()).catch((e) => common_1.Logger.error(`COD notifications failed for ${saved.orderNumber}: ${e.message}`));
         return saved;
+    }
+    async dispatchPaymentReceipt(orderId) {
+        const order = await this.orderModel
+            .findById(orderId)
+            .populate('buyerId', 'firstName lastName email')
+            .exec();
+        if (!order)
+            return;
+        const buyer = order.buyerId;
+        const receiptTo = order.receiptEmail || buyer?.email;
+        if (receiptTo) {
+            await this.notificationsService.sendOrderConfirmation(receiptTo, {
+                buyerName: buyer?.firstName || 'Customer',
+                orderNumber: order.orderNumber,
+                items: order.items.map((i) => ({
+                    itemName: i.itemName,
+                    quantity: i.quantity,
+                    unitPrice: i.unitPrice,
+                })),
+                totalAmount: order.totalAmount,
+                shippingAddress: order.shippingAddress,
+            });
+        }
+        try {
+            this.alertsService.createAlert({
+                userId: order.buyerId.toString(),
+                type: contants_2.AlertType.PaymentSuccessful,
+                title: 'Payment received ✅',
+                message: `We have received payment for order #${order.orderNumber}.`,
+                entityId: order._id,
+                entityType: 'order',
+            });
+        }
+        catch {
+        }
     }
     async dispatchPayOnDeliveryNotifications(orderId) {
         const order = await this.orderModel
@@ -212,7 +247,7 @@ let OrdersService = class OrdersService {
         };
         if (receiptTo) {
             try {
-                await this.notificationsService.sendOrderConfirmation(receiptTo, confirmationData);
+                await this.notificationsService.sendOrderPlacedOnDelivery(receiptTo, confirmationData);
             }
             catch (e) {
                 common_1.Logger.error(`❌ COD buyer email failed: ${e.message}`);
@@ -243,9 +278,10 @@ let OrdersService = class OrdersService {
         try {
             this.alertsService.createAlert({
                 userId: order.buyerId.toString(),
-                type: contants_2.AlertType.OrderConfirmed,
-                title: 'Order Placed! 🛵',
-                message: `Your order #${order.orderNumber} has been placed. Pay with cash on delivery.`,
+                type: contants_2.AlertType.OrderPlaced,
+                title: 'Order placed 🛵',
+                message: `We have received order #${order.orderNumber}. ` +
+                    `Our team will reach out to confirm it — payment is due on delivery.`,
                 entityId: order._id,
                 entityType: 'order',
             });
@@ -462,7 +498,32 @@ let OrdersService = class OrdersService {
         if (!order) {
             throw new common_1.NotFoundException('Order not found');
         }
-        const { status, adminNote, cancellationReason, carrier, trackingNumber, estimatedDelivery, } = updateDto;
+        const { status, paymentStatus, adminNote, cancellationReason, carrier, trackingNumber, estimatedDelivery, } = updateDto;
+        if (!status && !paymentStatus) {
+            throw new common_1.BadRequestException('Provide a status, a paymentStatus, or both.');
+        }
+        const wasUnpaid = order.paymentStatus !== contants_1.PaymentStatus.Success;
+        if (paymentStatus && paymentStatus !== order.paymentStatus) {
+            order.paymentStatus = paymentStatus;
+            if (paymentStatus === contants_1.PaymentStatus.Success) {
+                order.paymentInfo = {
+                    ...order.paymentInfo,
+                    method: order.paymentInfo?.method || 'pay_on_delivery',
+                    status: 'success',
+                    paidAt: new Date(),
+                };
+            }
+        }
+        if (!status) {
+            if (adminNote)
+                order.adminNote = adminNote;
+            const savedOrder = await order.save();
+            if (wasUnpaid &&
+                savedOrder.paymentStatus === contants_1.PaymentStatus.Success) {
+                await this.dispatchPaymentReceipt(savedOrder._id.toString()).catch((e) => common_1.Logger.error(`Receipt for ${savedOrder.orderNumber} failed: ${e.message}`));
+            }
+            return savedOrder;
+        }
         const validTransitions = {
             [contants_1.OrderStatus.Pending]: [contants_1.OrderStatus.Confirmed, contants_1.OrderStatus.Cancelled],
             [contants_1.OrderStatus.Confirmed]: [contants_1.OrderStatus.Processing, contants_1.OrderStatus.Cancelled],
@@ -525,6 +586,9 @@ let OrdersService = class OrdersService {
                 trackingNumber: order.trackingInfo?.trackingNumber,
                 carrier: order.trackingInfo?.carrier,
             });
+        }
+        if (wasUnpaid && savedOrder.paymentStatus === contants_1.PaymentStatus.Success) {
+            await this.dispatchPaymentReceipt(savedOrder._id.toString()).catch((e) => common_1.Logger.error(`Receipt for ${savedOrder.orderNumber} failed: ${e.message}`));
         }
         const statusAlertMap = {
             [contants_1.OrderStatus.Processing]: {

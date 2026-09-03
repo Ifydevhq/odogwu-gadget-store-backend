@@ -32,6 +32,7 @@ export declare class OrdersService {
         commissionRate: number;
     }>, shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number): Promise<OrderDocument>;
     createPayOnDeliveryOrder(buyerId: string, items: Parameters<OrdersService['createCartOrder']>[1], shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number): Promise<OrderDocument>;
+    private dispatchPaymentReceipt;
     private dispatchPayOnDeliveryNotifications;
     confirmPayment(orderId: string, paymentReference: string, paystackReference: string): Promise<OrderDocument>;
     findByPaymentReference(reference: string): Promise<OrderDocument>;

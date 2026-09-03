@@ -368,7 +368,10 @@ export class OrdersService {
       deliveryFee,
     );
 
-    order.status = OrderStatus.Confirmed;
+    // Stays PENDING, not Confirmed. Nothing has been paid and nobody has
+    // checked stock or the address yet — confirming here told the customer
+    // their order was locked in before anyone had looked at it.
+    order.status = OrderStatus.Pending;
     order.paymentStatus = PaymentStatus.Pending;
     order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
     const saved = await order.save();
@@ -383,7 +386,51 @@ export class OrdersService {
     return saved;
   }
 
-  /** Buyer receipt + admin copy + owner WhatsApp + in-app alert for COD orders. */
+  /**
+   * Sends the buyer their receipt once payment has actually been recorded.
+   *
+   * For a pay-on-delivery order this is the *only* place the "Order Confirmed
+   * / Total Paid" email comes from — it must never go out at order-creation
+   * time, when no money has changed hands.
+   */
+  private async dispatchPaymentReceipt(orderId: string) {
+    const order = await this.orderModel
+      .findById(orderId)
+      .populate('buyerId', 'firstName lastName email')
+      .exec();
+    if (!order) return;
+
+    const buyer = order.buyerId as any;
+    const receiptTo = order.receiptEmail || buyer?.email;
+    if (receiptTo) {
+      await this.notificationsService.sendOrderConfirmation(receiptTo, {
+        buyerName: buyer?.firstName || 'Customer',
+        orderNumber: order.orderNumber,
+        items: order.items.map((i) => ({
+          itemName: i.itemName,
+          quantity: i.quantity,
+          unitPrice: i.unitPrice,
+        })),
+        totalAmount: order.totalAmount,
+        shippingAddress: order.shippingAddress as any,
+      });
+    }
+
+    try {
+      this.alertsService.createAlert({
+        userId: order.buyerId.toString(),
+        type: AlertType.PaymentSuccessful,
+        title: 'Payment received ✅',
+        message: `We have received payment for order #${order.orderNumber}.`,
+        entityId: order._id,
+        entityType: 'order',
+      });
+    } catch {
+      /* non-fatal */
+    }
+  }
+
+  /** Buyer acknowledgement + admin copy + owner WhatsApp + in-app alert for COD orders. */
   private async dispatchPayOnDeliveryNotifications(orderId: string) {
     const order = await this.orderModel
       .findById(orderId)
@@ -407,7 +454,9 @@ export class OrdersService {
 
     if (receiptTo) {
       try {
-        await this.notificationsService.sendOrderConfirmation(
+        // Acknowledgement, not a receipt: a pay-on-delivery order has not been
+        // paid for, so sending "Order Confirmed / Total Paid" was wrong.
+        await this.notificationsService.sendOrderPlacedOnDelivery(
           receiptTo,
           confirmationData,
         );
@@ -442,9 +491,11 @@ export class OrdersService {
     try {
       this.alertsService.createAlert({
         userId: order.buyerId.toString(),
-        type: AlertType.OrderConfirmed,
-        title: 'Order Placed! 🛵',
-        message: `Your order #${order.orderNumber} has been placed. Pay with cash on delivery.`,
+        type: AlertType.OrderPlaced,
+        title: 'Order placed 🛵',
+        message:
+          `We have received order #${order.orderNumber}. ` +
+          `Our team will reach out to confirm it — payment is due on delivery.`,
         entityId: order._id,
         entityType: 'order',
       });
@@ -798,12 +849,52 @@ export class OrdersService {
 
     const {
       status,
+      paymentStatus,
       adminNote,
       cancellationReason,
       carrier,
       trackingNumber,
       estimatedDelivery,
     } = updateDto;
+
+    if (!status && !paymentStatus) {
+      throw new BadRequestException(
+        'Provide a status, a paymentStatus, or both.',
+      );
+    }
+
+    // ─── Payment status ──────────────────────────────────────
+    // This is how a pay-on-delivery order gets settled: the cash arrives, an
+    // admin sets paymentStatus to `success`, and only then does the buyer get
+    // a receipt.
+    const wasUnpaid = order.paymentStatus !== PaymentStatus.Success;
+    if (paymentStatus && paymentStatus !== order.paymentStatus) {
+      order.paymentStatus = paymentStatus;
+      if (paymentStatus === PaymentStatus.Success) {
+        order.paymentInfo = {
+          ...order.paymentInfo,
+          method: order.paymentInfo?.method || 'pay_on_delivery',
+          status: 'success',
+          paidAt: new Date(),
+        };
+      }
+    }
+
+    if (!status) {
+      if (adminNote) order.adminNote = adminNote;
+      const savedOrder = await order.save();
+      if (
+        wasUnpaid &&
+        savedOrder.paymentStatus === PaymentStatus.Success
+      ) {
+        await this.dispatchPaymentReceipt(savedOrder._id.toString()).catch((e) =>
+          Logger.error(
+            `Receipt for ${savedOrder.orderNumber} failed: ${e.message}`,
+          ),
+        );
+      }
+      return savedOrder;
+    }
 
     // Validate status transition
     const validTransitions: Record<string, string[]> = {
@@ -885,6 +976,14 @@ export class OrdersService {
         trackingNumber: order.trackingInfo?.trackingNumber,
         carrier: order.trackingInfo?.carrier,
       });
+    }
+
+    if (wasUnpaid && savedOrder.paymentStatus === PaymentStatus.Success) {
+      await this.dispatchPaymentReceipt(savedOrder._id.toString()).catch((e) =>
+        Logger.error(
+          `Receipt for ${savedOrder.orderNumber} failed: ${e.message}`,
+        ),
+      );
     }
 
     // ─── In-app alert for status change ─────────────────────

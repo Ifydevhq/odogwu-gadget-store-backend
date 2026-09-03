@@ -43,6 +43,25 @@ export declare function orderConfirmationTemplate(brand: EmailBrand, data: {
     subject: string;
     html: string;
 };
+export declare function orderPlacedOnDeliveryTemplate(brand: EmailBrand, data: {
+    buyerName: string;
+    orderNumber: string;
+    items: Array<{
+        itemName: string;
+        quantity: number;
+        unitPrice: number;
+    }>;
+    totalAmount: number;
+    shippingAddress: {
+        fullName: string;
+        address: string;
+        city: string;
+        state: string;
+    };
+}): {
+    subject: string;
+    html: string;
+};
 export declare function newOrderAlertTemplate(brand: EmailBrand, data: {
     sellerName: string;
     orderNumber: string;
