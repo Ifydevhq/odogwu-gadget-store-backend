@@ -62,6 +62,27 @@ export declare function orderPlacedOnDeliveryTemplate(brand: EmailBrand, data: {
     subject: string;
     html: string;
 };
+export declare function adminOrderCopyTemplate(brand: EmailBrand, data: {
+    buyerName: string;
+    orderNumber: string;
+    items: Array<{
+        itemName: string;
+        quantity: number;
+        unitPrice: number;
+    }>;
+    totalAmount: number;
+    shippingAddress: {
+        fullName: string;
+        address: string;
+        city: string;
+        state: string;
+        phoneNumber?: string;
+    };
+    payOnDelivery?: boolean;
+}): {
+    subject: string;
+    html: string;
+};
 export declare function newOrderAlertTemplate(brand: EmailBrand, data: {
     sellerName: string;
     orderNumber: string;

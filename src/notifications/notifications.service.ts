@@ -35,6 +35,7 @@ import {
   passwordResetTemplate,
   orderConfirmationTemplate,
   orderPlacedOnDeliveryTemplate,
+  adminOrderCopyTemplate,
   newOrderAlertTemplate,
   orderStatusUpdateTemplate,
   listingApprovedTemplate,
@@ -453,6 +454,14 @@ export class NotificationsService {
     await this.send(buyerEmail, subject, html);
   }
 
+  /**
+   * Internal copy of a new order.
+   *
+   * Uses its own template rather than the buyer's receipt: the admin needs to
+   * know whether the money is already in. Sending the receipt meant every
+   * pay-on-delivery order was announced internally as "Total Paid" when
+   * nothing had been collected.
+   */
   async sendAdminOrderCopy(data: {
     buyerName: string;
     orderNumber: string;
@@ -463,12 +472,14 @@ export class NotificationsService {
       address: string;
       city: string;
       state: string;
+      phoneNumber?: string;
     };
+    payOnDelivery?: boolean;
   }): Promise<void> {
     if (!this.adminEmail) return;
 
-    const { subject, html } = orderConfirmationTemplate(this.brand, data);
-    await this.send(this.adminEmail, `[Admin Copy] ${subject}`, html);
+    const { subject, html } = adminOrderCopyTemplate(this.brand, data);
+    await this.send(this.adminEmail, `[Admin] ${subject}`, html);
   }
 
   async sendNewOrderAlert(

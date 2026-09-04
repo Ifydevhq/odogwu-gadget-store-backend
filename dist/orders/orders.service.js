@@ -256,7 +256,10 @@ let OrdersService = class OrdersService {
             }
         }
         try {
-            await this.notificationsService.sendAdminOrderCopy(confirmationData);
+            await this.notificationsService.sendAdminOrderCopy({
+                ...confirmationData,
+                payOnDelivery: true,
+            });
         }
         catch (e) {
             common_1.Logger.error(`❌ COD admin copy failed: ${e.message}`);

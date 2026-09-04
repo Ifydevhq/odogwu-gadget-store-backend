@@ -5,6 +5,7 @@ exports.welcomeTemplate = welcomeTemplate;
 exports.passwordResetTemplate = passwordResetTemplate;
 exports.orderConfirmationTemplate = orderConfirmationTemplate;
 exports.orderPlacedOnDeliveryTemplate = orderPlacedOnDeliveryTemplate;
+exports.adminOrderCopyTemplate = adminOrderCopyTemplate;
 exports.newOrderAlertTemplate = newOrderAlertTemplate;
 exports.orderStatusUpdateTemplate = orderStatusUpdateTemplate;
 exports.listingApprovedTemplate = listingApprovedTemplate;
@@ -305,6 +306,77 @@ function orderPlacedOnDeliveryTemplate(brand, data) {
         <strong>${data.shippingAddress.fullName}</strong><br>
         ${data.shippingAddress.address}<br>
         ${data.shippingAddress.city}, ${data.shippingAddress.state}
+      </p>
+    `),
+    };
+}
+function adminOrderCopyTemplate(brand, data) {
+    const cod = data.payOnDelivery === true;
+    const itemRows = data.items
+        .map((item) => `
+        <tr>
+          <td style="padding: 14px 12px; border-bottom: 1px solid ${COLORS.border}; font-size: 14px; color: ${COLORS.body};">${item.itemName}</td>
+          <td style="padding: 14px 8px; border-bottom: 1px solid ${COLORS.border}; font-size: 14px; color: ${COLORS.muted}; text-align: center;">${item.quantity}</td>
+          <td style="padding: 14px 8px; border-bottom: 1px solid ${COLORS.border}; font-size: 14px; color: ${COLORS.muted}; text-align: right;">${formatPrice(item.unitPrice)}</td>
+          <td style="padding: 14px 12px; border-bottom: 1px solid ${COLORS.border}; font-size: 14px; color: ${COLORS.ink}; text-align: right; font-weight: 600;">${formatPrice(item.unitPrice * item.quantity)}</td>
+        </tr>`)
+        .join('');
+    const moneyBlock = cod
+        ? `<div style="${styles.dueBox}">
+         <span style="${styles.dueLabel}">Collect on delivery</span><br>
+         <span style="${styles.dueValue}">${formatPrice(data.totalAmount)}</span>
+       </div>`
+        : `<div style="${styles.totalBox}">
+         <span style="${styles.totalLabel}">Total paid</span><br>
+         <span style="${styles.totalValue}">${formatPrice(data.totalAmount)}</span>
+       </div>`;
+    const phone = data.shippingAddress.phoneNumber
+        ? `<br>${data.shippingAddress.phoneNumber}`
+        : '';
+    return {
+        subject: cod
+            ? `New order (pay on delivery) — ${data.orderNumber}`
+            : `New order (paid) — ${data.orderNumber}`,
+        html: baseLayout(brand, `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="${cod ? styles.badgeWarning : styles.badgeSuccess}">
+          ${cod ? 'Payment due on delivery' : 'Payment received'}
+        </span>
+      </div>
+
+      <h2 style="${styles.h2}; text-align: center;">New order from ${data.buyerName}</h2>
+      <p style="${styles.p}; text-align: center;">${cod
+            ? 'This order has <strong>not</strong> been paid for. Confirm it with the customer and collect payment on delivery.'
+            : 'Payment has been received. This order is ready to be fulfilled.'}</p>
+
+      <div style="${styles.infoBox}; text-align: center;">
+        <p style="margin: 0; font-size: 13px; color: ${COLORS.muted}; text-transform: uppercase; letter-spacing: 1px;">Order Number</p>
+        <p style="margin: 4px 0 0 0; font-size: 20px; font-weight: 700; color: ${COLORS.ink};">${data.orderNumber}</p>
+      </div>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
+        <thead>
+          <tr>
+            <th style="${styles.tableHead}">Item</th>
+            <th style="${styles.tableHead} text-align: center;">Qty</th>
+            <th style="${styles.tableHead} text-align: right;">Price</th>
+            <th style="${styles.tableHead} text-align: right;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+        </tbody>
+      </table>
+
+      ${moneyBlock}
+
+      <hr style="${styles.divider}">
+
+      <p style="margin: 0 0 8px 0; font-size: 13px; color: ${COLORS.muted}; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Deliver To</p>
+      <p style="margin: 0; font-size: 15px; color: ${COLORS.body}; line-height: 1.6;">
+        <strong>${data.shippingAddress.fullName}</strong><br>
+        ${data.shippingAddress.address}<br>
+        ${data.shippingAddress.city}, ${data.shippingAddress.state}${phone}
       </p>
     `),
     };

@@ -1,9 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = require("@nestjs/config");
+const DEFAULT_LOGO_URL = 'https://odogwugadgetstore-nu.vercel.app/assets/imgs/logos/ogs-logo-light-theme.png';
+function resolveLogoUrl(configured) {
+    if (!configured)
+        return DEFAULT_LOGO_URL;
+    return configured.toLowerCase().includes('kraft')
+        ? DEFAULT_LOGO_URL
+        : configured;
+}
 exports.default = (0, config_1.registerAs)('app', () => ({
     name: process.env.APP_NAME || 'Odogwu Gadget Store',
-    logoUrl: process.env.APP_LOGO_URL || null,
+    logoUrl: resolveLogoUrl(process.env.APP_LOGO_URL),
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT, 10) || 5001,
     corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001',

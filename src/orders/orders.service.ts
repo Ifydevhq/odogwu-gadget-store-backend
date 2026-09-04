@@ -468,7 +468,10 @@ export class OrdersService {
     }
 
     try {
-      await this.notificationsService.sendAdminOrderCopy(confirmationData);
+      await this.notificationsService.sendAdminOrderCopy({
+        ...confirmationData,
+        payOnDelivery: true,
+      });
     } catch (e) {
       Logger.error(`❌ COD admin copy failed: ${e.message}`);
     }
@@ -622,7 +625,7 @@ export class OrdersService {
         );
       }
 
-      // Separate admin copy
+      // Separate admin copy — paid, so no payOnDelivery flag.
       try {
         await this.notificationsService.sendAdminOrderCopy(confirmationData);
       } catch (adminEmailError) {

@@ -291,8 +291,8 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
     async sendAdminOrderCopy(data) {
         if (!this.adminEmail)
             return;
-        const { subject, html } = (0, email_templates_1.orderConfirmationTemplate)(this.brand, data);
-        await this.send(this.adminEmail, `[Admin Copy] ${subject}`, html);
+        const { subject, html } = (0, email_templates_1.adminOrderCopyTemplate)(this.brand, data);
+        await this.send(this.adminEmail, `[Admin] ${subject}`, html);
     }
     async sendNewOrderAlert(sellerEmail, data) {
         const { subject, html } = (0, email_templates_1.newOrderAlertTemplate)(this.brand, data);

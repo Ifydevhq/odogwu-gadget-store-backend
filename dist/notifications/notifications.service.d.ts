@@ -89,7 +89,9 @@ export declare class NotificationsService {
             address: string;
             city: string;
             state: string;
+            phoneNumber?: string;
         };
+        payOnDelivery?: boolean;
     }): Promise<void>;
     sendNewOrderAlert(sellerEmail: string, data: {
         sellerName: string;

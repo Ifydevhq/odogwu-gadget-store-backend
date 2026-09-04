@@ -17,10 +17,29 @@
 
 import { registerAs } from '@nestjs/config';
 
+/** Brand mark for emails — the same one the mobile splash screen uses. */
+const DEFAULT_LOGO_URL =
+  'https://odogwugadgetstore-nu.vercel.app/assets/imgs/logos/ogs-logo-light-theme.png';
+
+function resolveLogoUrl(configured?: string): string {
+  if (!configured) return DEFAULT_LOGO_URL;
+  // Guard against the inherited Kraft asset lingering in a deployed env.
+  return configured.toLowerCase().includes('kraft')
+    ? DEFAULT_LOGO_URL
+    : configured;
+}
+
 export default registerAs('app', () => ({
   // General
   name: process.env.APP_NAME || 'Odogwu Gadget Store',
-  logoUrl: process.env.APP_LOGO_URL || null,
+  // The mark used on the app's splash screen, served from the storefront.
+  //
+  // Defaulted in code rather than left to APP_LOGO_URL alone: the deployed
+  // environment still carries a Cloudinary URL for another project's logo
+  // ("kraft-logo-new-3"), and a stale env var should not put someone else's
+  // brand at the top of every customer email. A configured URL still wins —
+  // unless it is that logo.
+  logoUrl: resolveLogoUrl(process.env.APP_LOGO_URL),
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5001,
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001',
