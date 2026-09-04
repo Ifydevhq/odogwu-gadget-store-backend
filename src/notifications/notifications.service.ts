@@ -63,7 +63,10 @@ export class NotificationsService {
   private readonly callmebotApiKey: string | null;
 
   constructor(private configService: ConfigService) {
-    const appName = this.configService.get<string>('app.name') || 'Kraft';
+    // Fallback is the product's own name — the old 'Kraft' default leaked
+    // another project's branding into every email whenever APP_NAME was unset.
+    const appName =
+      this.configService.get<string>('app.name') || 'Odogwu Gadget Store';
     const logoUrl = this.configService.get<string>('app.logoUrl') || null;
     const frontendUrl =
       this.configService.get<string>('app.frontendUrl') ||

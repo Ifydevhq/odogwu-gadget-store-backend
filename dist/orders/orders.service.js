@@ -42,7 +42,9 @@ let OrdersService = class OrdersService {
         return `CMK-${dateStr}-${suffix}`;
     }
     calculateRevenueSplit(listing, quantity) {
-        const unitPrice = listing.adminPricing?.sellingPrice || listing.askingPrice.amount;
+        const unitPrice = listing.discountPrice ||
+            listing.adminPricing?.sellingPrice ||
+            listing.askingPrice.amount;
         const totalAmount = unitPrice * quantity;
         if (listing.type === contants_1.ListingType.DirectPurchase) {
             return {
@@ -213,7 +215,7 @@ let OrdersService = class OrdersService {
             });
         }
         try {
-            this.alertsService.createAlert({
+            await this.alertsService.createAlert({
                 userId: order.buyerId.toString(),
                 type: contants_2.AlertType.PaymentSuccessful,
                 title: 'Payment received ✅',
@@ -276,7 +278,7 @@ let OrdersService = class OrdersService {
             common_1.Logger.error(`❌ COD owner WhatsApp failed: ${e.message}`);
         }
         try {
-            this.alertsService.createAlert({
+            await this.alertsService.createAlert({
                 userId: order.buyerId.toString(),
                 type: contants_2.AlertType.OrderPlaced,
                 title: 'Order placed 🛵',

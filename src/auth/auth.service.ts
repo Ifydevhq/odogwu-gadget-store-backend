@@ -320,8 +320,8 @@ export class AuthService {
     this.alertsService.createAlert({
       userId: user._id,
       type: AlertType.Welcome,
-      title: 'Welcome to Kraft! 🎉',
-      message: `Hi ${user.firstName}, welcome to Kraft! Explore the marketplace, discover amazing Nigerian brands, and start shopping or selling today.`,
+      title: 'Welcome to Odogwu Gadget Store! 🎉',
+      message: `Hi ${user.firstName}, welcome! Browse our laptops, phones and accessories — and reach out any time if you need help choosing.`,
       entityType: 'user',
       entityId: user._id,
     }).catch(() => {}); // non-blocking

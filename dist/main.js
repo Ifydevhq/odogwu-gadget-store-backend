@@ -6,6 +6,12 @@ const swagger_1 = require("@nestjs/swagger");
 const common_1 = require("@nestjs/common");
 const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
 async function bootstrap() {
+    process.on('unhandledRejection', (reason) => {
+        common_1.Logger.error(`Unhandled promise rejection: ${reason instanceof Error ? reason.stack : JSON.stringify(reason)}`, 'UnhandledRejection');
+    });
+    process.on('uncaughtException', (error) => {
+        common_1.Logger.error(`Uncaught exception: ${error.stack || error.message}`, 'UncaughtException');
+    });
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     app.setGlobalPrefix('api/v1');
     app.enableCors({

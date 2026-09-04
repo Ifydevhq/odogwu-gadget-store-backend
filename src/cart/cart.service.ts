@@ -81,7 +81,9 @@ export class CartService {
 
     // 3. Determine the effective price
     const unitPrice =
-      listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+      listing.discountPrice ||
+        listing.adminPricing?.sellingPrice ||
+        listing.askingPrice?.amount;
     const image = listing.media?.[0]?.url || null;
 
     // 4. Upsert: find or create user's cart
@@ -311,7 +313,9 @@ export class CartService {
 
       // Check if price changed
       const currentPrice =
-        listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+        listing.discountPrice ||
+        listing.adminPricing?.sellingPrice ||
+        listing.askingPrice?.amount;
       if (currentPrice !== item.unitPrice) {
         priceChanged = true;
         // Update the snapshot
@@ -437,7 +441,9 @@ export class CartService {
 
       // Resolve current price
       const currentPrice =
-        listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+        listing.discountPrice ||
+        listing.adminPricing?.sellingPrice ||
+        listing.askingPrice?.amount;
       const commissionRate = listing.adminPricing?.commissionRate ?? 15;
 
       validItems.push({
@@ -726,7 +732,9 @@ export class CartService {
 
       // Live price vs snapshot
       const livePrice =
-        listing?.adminPricing?.sellingPrice || listing?.askingPrice?.amount;
+        listing?.discountPrice ||
+        listing?.adminPricing?.sellingPrice ||
+        listing?.askingPrice?.amount;
       const priceChanged = livePrice && livePrice !== item.unitPrice;
 
       return {

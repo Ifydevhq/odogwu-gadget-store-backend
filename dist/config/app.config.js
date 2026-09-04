@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const config_1 = require("@nestjs/config");
 exports.default = (0, config_1.registerAs)('app', () => ({
-    name: process.env.APP_NAME || 'Kraft',
+    name: process.env.APP_NAME || 'Odogwu Gadget Store',
     logoUrl: process.env.APP_LOGO_URL || null,
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT, 10) || 5001,
@@ -44,7 +44,7 @@ exports.default = (0, config_1.registerAs)('app', () => ({
         user: process.env.MAIL_USER,
         password: process.env.MAIL_PASSWORD,
         from: process.env.MAIL_FROM ||
-            `${process.env.APP_NAME || 'Kraft'} <noreply@kraft.ng>`,
+            `${process.env.APP_NAME || 'Odogwu Gadget Store'} <noreply@odogwugadgetstore.com.ng>`,
     },
     adminEmail: process.env.ADMIN_EMAIL || null,
     whatsapp: {

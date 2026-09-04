@@ -46,7 +46,9 @@ let CartService = CartService_1 = class CartService {
         if (quantity > listing.quantity) {
             throw new common_1.BadRequestException(`Only ${listing.quantity} available in stock`);
         }
-        const unitPrice = listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+        const unitPrice = listing.discountPrice ||
+            listing.adminPricing?.sellingPrice ||
+            listing.askingPrice?.amount;
         const image = listing.media?.[0]?.url || null;
         let cart = await this.cartModel.findOne({
             userId: new mongoose_2.Types.ObjectId(userId),
@@ -183,7 +185,9 @@ let CartService = CartService_1 = class CartService {
                 });
                 continue;
             }
-            const currentPrice = listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+            const currentPrice = listing.discountPrice ||
+                listing.adminPricing?.sellingPrice ||
+                listing.askingPrice?.amount;
             if (currentPrice !== item.unitPrice) {
                 priceChanged = true;
                 item.unitPrice = currentPrice;
@@ -255,7 +259,9 @@ let CartService = CartService_1 = class CartService {
                 });
                 continue;
             }
-            const currentPrice = listing.adminPricing?.sellingPrice || listing.askingPrice?.amount;
+            const currentPrice = listing.discountPrice ||
+                listing.adminPricing?.sellingPrice ||
+                listing.askingPrice?.amount;
             const commissionRate = listing.adminPricing?.commissionRate ?? 15;
             validItems.push({
                 listingId: listing._id.toString(),
@@ -409,7 +415,9 @@ let CartService = CartService_1 = class CartService {
             const isAvailable = listing
                 ? buyableTypes.includes(listing.type) && listing.status === 'live'
                 : false;
-            const livePrice = listing?.adminPricing?.sellingPrice || listing?.askingPrice?.amount;
+            const livePrice = listing?.discountPrice ||
+                listing?.adminPricing?.sellingPrice ||
+                listing?.askingPrice?.amount;
             const priceChanged = livePrice && livePrice !== item.unitPrice;
             return {
                 listingId: listing?._id || item.listingId,

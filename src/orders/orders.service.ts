@@ -104,7 +104,9 @@ export class OrdersService {
   } {
     // Use admin's selling price if set, otherwise asking price
     const unitPrice =
-      listing.adminPricing?.sellingPrice || listing.askingPrice.amount;
+      listing.discountPrice ||
+      listing.adminPricing?.sellingPrice ||
+      listing.askingPrice.amount;
     const totalAmount = unitPrice * quantity;
 
     if (listing.type === ListingType.DirectPurchase) {
@@ -417,7 +419,7 @@ export class OrdersService {
     }
 
     try {
-      this.alertsService.createAlert({
+      await this.alertsService.createAlert({
         userId: order.buyerId.toString(),
         type: AlertType.PaymentSuccessful,
         title: 'Payment received ✅',
@@ -489,7 +491,7 @@ export class OrdersService {
     }
 
     try {
-      this.alertsService.createAlert({
+      await this.alertsService.createAlert({
         userId: order.buyerId.toString(),
         type: AlertType.OrderPlaced,
         title: 'Order placed 🛵',

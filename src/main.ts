@@ -24,6 +24,30 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
+  // Last line of defence.
+  //
+  // A rejected promise that nobody awaited terminates the Node process by
+  // default (Node >= 15), which on a hosted dyno means the container restarts
+  // and whatever request was in flight never gets a response — the client sees
+  // an unexplained "internal server error". Fire-and-forget side effects
+  // (alerts, emails, WhatsApp) are exactly the code that produces those, so
+  // log them loudly and keep serving instead of dying.
+  process.on('unhandledRejection', (reason) => {
+    Logger.error(
+      `Unhandled promise rejection: ${
+        reason instanceof Error ? reason.stack : JSON.stringify(reason)
+      }`,
+      'UnhandledRejection',
+    );
+  });
+
+  process.on('uncaughtException', (error) => {
+    Logger.error(
+      `Uncaught exception: ${error.stack || error.message}`,
+      'UncaughtException',
+    );
+  });
+
   const app = await NestFactory.create(AppModule);
 
   // -------------------------------------------------------------------

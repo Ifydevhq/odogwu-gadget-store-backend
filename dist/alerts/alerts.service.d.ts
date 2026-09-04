@@ -14,7 +14,7 @@ export declare class AlertsService {
         entityId?: string | Types.ObjectId;
         entityType?: 'order' | 'listing' | 'store' | 'dispute' | 'review' | 'user';
         metadata?: Record<string, any>;
-    }): Promise<AlertDocument>;
+    }): Promise<AlertDocument | null>;
     createBulkAlerts(userIds: (string | Types.ObjectId)[], params: Omit<Parameters<AlertsService['createAlert']>[0], 'userId'>): Promise<void>;
     getAlerts(userId: string, dto: GetAlertsDto): Promise<{
         data: (import("mongoose").FlattenMaps<AlertDocument> & {

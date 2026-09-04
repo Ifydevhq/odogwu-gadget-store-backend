@@ -25,7 +25,7 @@ export class AlertsService {
     entityId?: string | Types.ObjectId;
     entityType?: 'order' | 'listing' | 'store' | 'dispute' | 'review' | 'user';
     metadata?: Record<string, any>;
-  }): Promise<AlertDocument> {
+  }): Promise<AlertDocument | null> {
     try {
       const alert = await this.alertModel.create({
         userId: new Types.ObjectId(String(params.userId)),
@@ -39,8 +39,20 @@ export class AlertsService {
       this.logger.log(`Alert created: [${params.type}] for user ${params.userId}`);
       return alert;
     } catch (error) {
-      this.logger.error(`Failed to create alert: ${error.message}`);
-      throw error;
+      // Deliberately swallowed.
+      //
+      // An in-app alert is a side effect of some other operation — placing an
+      // order, approving a listing — and must never be able to fail it. Every
+      // one of the nine call sites invokes this WITHOUT awaiting, so a rethrow
+      // here escapes the caller's try/catch entirely and surfaces as an
+      // unhandled promise rejection, which Node terminates the process for.
+      // That is what turned a successful pay-on-delivery checkout into an
+      // "internal server error" for the customer: the order was saved, then
+      // the API died before it could answer.
+      this.logger.error(
+        `Failed to create alert [${params.type}] for user ${params.userId}: ${error.message}`,
+      );
+      return null;
     }
   }
 

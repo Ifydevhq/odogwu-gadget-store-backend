@@ -24,7 +24,7 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         this.logger = new common_1.Logger(NotificationsService_1.name);
         this.resend = null;
         this.transporter = null;
-        const appName = this.configService.get('app.name') || 'Kraft';
+        const appName = this.configService.get('app.name') || 'Odogwu Gadget Store';
         const logoUrl = this.configService.get('app.logoUrl') || null;
         const frontendUrl = this.configService.get('app.frontendUrl') ||
             'http://localhost:3000';

@@ -38,8 +38,8 @@ let AlertsService = AlertsService_1 = class AlertsService {
             return alert;
         }
         catch (error) {
-            this.logger.error(`Failed to create alert: ${error.message}`);
-            throw error;
+            this.logger.error(`Failed to create alert [${params.type}] for user ${params.userId}: ${error.message}`);
+            return null;
         }
     }
     async createBulkAlerts(userIds, params) {

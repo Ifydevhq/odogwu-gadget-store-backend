@@ -19,7 +19,7 @@ import { registerAs } from '@nestjs/config';
 
 export default registerAs('app', () => ({
   // General
-  name: process.env.APP_NAME || 'Kraft',
+  name: process.env.APP_NAME || 'Odogwu Gadget Store',
   logoUrl: process.env.APP_LOGO_URL || null,
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5001,
@@ -77,7 +77,7 @@ export default registerAs('app', () => ({
     password: process.env.MAIL_PASSWORD,
     from:
       process.env.MAIL_FROM ||
-      `${process.env.APP_NAME || 'Kraft'} <noreply@kraft.ng>`,
+      `${process.env.APP_NAME || 'Odogwu Gadget Store'} <noreply@odogwugadgetstore.com.ng>`,
   },
 
   // Admin
