@@ -28,13 +28,13 @@ let ListingsController = class ListingsController {
         this.listingsService = listingsService;
     }
     async create(user, createListingDto) {
-        return this.listingsService.create(user.sub, createListingDto);
+        return this.listingsService.create(user.sub, createListingDto, user.role);
     }
     async findMyListings(user, queryDto) {
         return this.listingsService.findMyListings(user.sub, queryDto);
     }
     async update(listingId, user, updateListingDto) {
-        return this.listingsService.update(listingId, user.sub, updateListingDto);
+        return this.listingsService.update(listingId, user.sub, updateListingDto, user.role);
     }
     async remove(listingId, user) {
         return this.listingsService.remove(listingId, user.sub);

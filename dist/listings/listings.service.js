@@ -65,8 +65,16 @@ let ListingsService = class ListingsService {
         }
         return listing;
     }
-    async create(userId, createListingDto) {
-        const { storeId, type, whatsappNumber } = createListingDto;
+    async create(userId, createListingDto, creatorRole) {
+        const { storeId, type, whatsappNumber, formerPrice } = createListingDto;
+        const skipReview = creatorRole === contants_1.UserRole.SuperAdmin || creatorRole === contants_1.UserRole.Admin;
+        const sellingAmount = createListingDto.askingPrice?.amount ?? 0;
+        let formerPriceKobo;
+        let discountPercent;
+        if (formerPrice && sellingAmount > 0 && formerPrice > sellingAmount) {
+            formerPriceKobo = formerPrice;
+            discountPercent = Math.round(((formerPrice - sellingAmount) / formerPrice) * 100);
+        }
         let store = null;
         if (storeId) {
             store = await this.storesService.findById(storeId);
@@ -102,9 +110,14 @@ let ListingsService = class ListingsService {
             storeId: storeId ? new mongoose_2.Types.ObjectId(storeId) : null,
             creatorId: creator._id,
             userId: new mongoose_2.Types.ObjectId(userId),
-            status: contants_1.ListingStatus.InReview,
             whatsappNumber: whatsappNumber || store?.whatsappNumber || creator.whatsappNumber,
             ...selfListingFeeData,
+            status: skipReview ? contants_1.ListingStatus.Live : contants_1.ListingStatus.InReview,
+            formerPrice: formerPriceKobo,
+            discountPercent: discountPercent,
+            ...(skipReview
+                ? { listingFeeStatus: 'waived', isExpectingFee: false }
+                : {}),
         });
         const savedListing = await listing.save();
         if (storeId) {
@@ -134,8 +147,9 @@ let ListingsService = class ListingsService {
             .exec();
         return listing;
     }
-    async update(listingId, userId, updateListingDto) {
+    async update(listingId, userId, updateListingDto, editorRole) {
         const listing = await this.verifyOwnership(listingId, userId);
+        const skipReview = editorRole === contants_1.UserRole.SuperAdmin || editorRole === contants_1.UserRole.Admin;
         const editableStatuses = [
             contants_1.ListingStatus.Draft,
             contants_1.ListingStatus.InReview,
@@ -151,7 +165,7 @@ let ListingsService = class ListingsService {
         const isCurrentlyLive = listing.status === contants_1.ListingStatus.Live;
         const priceChanged = updateListingDto.askingPrice?.amount !== undefined &&
             updateListingDto.askingPrice.amount !== listing.askingPrice?.amount;
-        if (isCurrentlyLive) {
+        if (isCurrentlyLive && !skipReview) {
             listing.status = contants_1.ListingStatus.InReview;
             listing.wasLive = true;
             listing.reviewInfo = null;
@@ -161,6 +175,18 @@ let ListingsService = class ListingsService {
             listing.reviewInfo = null;
         }
         Object.assign(listing, updateListingDto);
+        const sellingAmount = listing.askingPrice?.amount ?? 0;
+        const nextFormer = updateListingDto.formerPrice !== undefined
+            ? updateListingDto.formerPrice
+            : listing.formerPrice;
+        if (nextFormer && sellingAmount > 0 && nextFormer > sellingAmount) {
+            listing.formerPrice = nextFormer;
+            listing.discountPercent = Math.round(((nextFormer - sellingAmount) / nextFormer) * 100);
+        }
+        else {
+            listing.set('formerPrice', undefined);
+            listing.set('discountPercent', undefined);
+        }
         if (listing.type === contants_1.ListingType.SelfListing && priceChanged) {
             const freeListing = await this.isFreeListing();
             const newFee = await this.calculateListingFee(listing.askingPrice.amount);

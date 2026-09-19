@@ -22,6 +22,7 @@ export declare class CreateListingDto {
     condition: ItemCondition;
     type: ListingType;
     askingPrice: PriceInfoDto;
+    formerPrice?: number;
     media: MediaItemDto[];
     category?: string;
     subCategory?: string;

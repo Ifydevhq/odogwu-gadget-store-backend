@@ -83,7 +83,7 @@ export class ListingsController {
     @GetUser() user: JwtPayload,
     @Body() createListingDto: CreateListingDto,
   ) {
-    return this.listingsService.create(user.sub, createListingDto);
+    return this.listingsService.create(user.sub, createListingDto, user.role);
   }
 
   // ─── GET /api/v1/listings/mine ──────────────────────────
@@ -129,7 +129,12 @@ export class ListingsController {
     @GetUser() user: JwtPayload,
     @Body() updateListingDto: UpdateListingDto,
   ) {
-    return this.listingsService.update(listingId, user.sub, updateListingDto);
+    return this.listingsService.update(
+      listingId,
+      user.sub,
+      updateListingDto,
+      user.role,
+    );
   }
 
   // ─── DELETE /api/v1/listings/:id ────────────────────────
