@@ -15,6 +15,13 @@ export declare class Message {
     readBy: Types.ObjectId[];
     attachments: string[];
     isDeleted: boolean;
+    edited: boolean;
+    editedAt?: Date;
+    replyTo?: {
+        messageId: Types.ObjectId;
+        content: string;
+        senderId: Types.ObjectId;
+    } | null;
 }
 export declare const MessageSchema: import("mongoose").Schema<Message, import("mongoose").Model<Message, any, any, any, Document<unknown, any, Message> & Message & {
     _id: Types.ObjectId;

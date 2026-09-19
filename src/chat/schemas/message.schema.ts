@@ -46,6 +46,28 @@ export class Message {
 
   @Prop({ type: Boolean, default: false })
   isDeleted: boolean;
+
+  // Edit tracking
+  @Prop({ type: Boolean, default: false })
+  edited: boolean;
+
+  @Prop({ type: Date, default: null })
+  editedAt?: Date;
+
+  // Denormalized snapshot of the message this one replies to (for preview)
+  @Prop({
+    type: {
+      messageId: { type: Types.ObjectId, ref: 'Message' },
+      content: { type: String },
+      senderId: { type: Types.ObjectId, ref: 'User' },
+    },
+    default: null,
+  })
+  replyTo?: {
+    messageId: Types.ObjectId;
+    content: string;
+    senderId: Types.ObjectId;
+  } | null;
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

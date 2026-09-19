@@ -4,6 +4,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import { RegisterPushTokenDto, RemovePushTokenDto } from './dto/push-token.dto';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
@@ -16,4 +17,6 @@ export declare class UsersController {
         message: string;
     }>;
     updateNotificationPreferences(user: JwtPayload, updateDto: UpdateNotificationPreferencesDto): Promise<import("./schemas/user.schema").UserDocument>;
+    addPushToken(user: JwtPayload, dto: RegisterPushTokenDto): Promise<import("./schemas/user.schema").UserDocument>;
+    removePushToken(user: JwtPayload, dto: RemovePushTokenDto): Promise<import("./schemas/user.schema").UserDocument>;
 }

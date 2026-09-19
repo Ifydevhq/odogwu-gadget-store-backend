@@ -767,3 +767,50 @@ export function listingRejectedTemplate(
     ),
   };
 }
+
+/**
+ * 9. Broadcast / Announcement — generic branded email for admin broadcasts
+ *    (promos, new arrivals, restock reminders, holiday greetings, etc.)
+ */
+export function broadcastTemplate(
+  brand: EmailBrand,
+  data: {
+    subject: string;
+    heading: string;
+    body: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    imageUrl?: string;
+  },
+): { subject: string; html: string } {
+  const imageHtml = data.imageUrl
+    ? `<img src="${data.imageUrl}" alt="${data.heading}" style="display: block; width: 100%; max-width: 520px; height: auto; border: 0; border-radius: 12px; margin: 0 0 24px 0;" />`
+    : '';
+
+  // Preserve author line breaks: blank lines become paragraphs.
+  const bodyHtml = data.body
+    .split(/\n{2,}/)
+    .map((para) => `<p style="${styles.p}">${para.replace(/\n/g, '<br>')}</p>`)
+    .join('');
+
+  const ctaHtml =
+    data.ctaText && data.ctaUrl
+      ? `
+      <p style="text-align: center; margin: 28px 0 0 0;">
+        <a href="${data.ctaUrl}" style="${styles.button}">${data.ctaText}</a>
+      </p>`
+      : '';
+
+  return {
+    subject: data.subject,
+    html: baseLayout(
+      brand,
+      `
+      ${imageHtml}
+      <h2 style="${styles.h2}">${data.heading}</h2>
+      ${bodyHtml}
+      ${ctaHtml}
+    `,
+    ),
+  };
+}

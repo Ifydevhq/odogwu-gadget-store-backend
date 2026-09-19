@@ -20,6 +20,7 @@
     "seed:odogwu": "ts-node src/scripts/seed-odogwu-laptops.ts",
     "seed:laptops": "ts-node src/scripts/seed-real-laptops.ts",
     "seed:catalog": "ts-node src/scripts/seed-catalog.ts",
+    "seed:categories": "ts-node -r tsconfig-paths/register src/scripts/seed-categories.ts",
     "update:store-logo": "ts-node src/scripts/update-store-logo.ts",
     "update:store-brand": "ts-node src/scripts/update-store-brand.ts"
   },
@@ -41,6 +42,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "cloudinary": "^2.9.0",
+    "firebase-admin": "^14.4.0",
     "mongoose": "^7.0.0",
     "nodemailer": "^8.0.1",
     "passport": "^0.6.0",

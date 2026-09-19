@@ -100,7 +100,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('sendMessage')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { conversationId: string; content: string; type?: string; productCard?: any; attachments?: string[] },
+    @MessageBody() data: { conversationId: string; content: string; type?: string; productCard?: any; attachments?: string[]; replyTo?: string },
   ) {
     const userId = client.data.user?.sub;
     if (!userId) return;
@@ -111,6 +111,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         type: data.type,
         productCard: data.productCard,
         attachments: data.attachments,
+        replyTo: data.replyTo,
       });
 
       // Broadcast to conversation room
@@ -163,6 +164,60 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { success: true, message: message.toObject() };
     } catch (err) {
       this.logger.error(`sendMessage error: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  @SubscribeMessage('editMessage')
+  async handleEditMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { messageId: string; content: string },
+  ) {
+    const userId = client.data.user?.sub;
+    if (!userId) return;
+
+    try {
+      const message = await this.chatService.editMessage(
+        data.messageId,
+        userId,
+        data.content,
+      );
+
+      this.server
+        .to(`conversation:${message.conversationId.toString()}`)
+        .emit('messageEdited', message.toObject());
+
+      return { success: true, message: message.toObject() };
+    } catch (err) {
+      this.logger.error(`editMessage error: ${err.message}`);
+      return { success: false, error: err.message };
+    }
+  }
+
+  @SubscribeMessage('deleteMessage')
+  async handleDeleteMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { messageId: string },
+  ) {
+    const userId = client.data.user?.sub;
+    if (!userId) return;
+
+    try {
+      const message = await this.chatService.deleteMessage(
+        data.messageId,
+        userId,
+      );
+
+      this.server
+        .to(`conversation:${message.conversationId.toString()}`)
+        .emit('messageDeleted', {
+          conversationId: message.conversationId.toString(),
+          messageId: message._id.toString(),
+        });
+
+      return { success: true };
+    } catch (err) {
+      this.logger.error(`deleteMessage error: ${err.message}`);
       return { success: false, error: err.message };
     }
   }

@@ -69,6 +69,51 @@ let OrdersService = class OrdersService {
         }
         throw new common_1.BadRequestException('Invalid listing type for ordering');
     }
+    async notifyOrderCreated(order, opts = {}) {
+        const { notifyBuyer = true } = opts;
+        const buyerId = order.buyerId?.toString();
+        const sellerIds = new Set();
+        const orderSeller = order.sellerId?._id?.toString() ||
+            order.sellerId?.toString();
+        if (orderSeller)
+            sellerIds.add(orderSeller);
+        for (const item of order.items || []) {
+            const sid = item.sellerId?.toString();
+            if (sid)
+                sellerIds.add(sid);
+        }
+        if (buyerId)
+            sellerIds.delete(buyerId);
+        const itemsSummary = order.items.length === 1
+            ? order.items[0].itemName
+            : `${order.items.length} items`;
+        for (const sellerId of sellerIds) {
+            this.alertsService
+                .createAlert({
+                userId: sellerId,
+                type: contants_2.AlertType.NewOrderReceived,
+                title: 'New Order Received! 🎉',
+                message: `You received a new order #${order.orderNumber} for ${itemsSummary}. Check your orders for details.`,
+                entityId: order._id.toString(),
+                entityType: 'order',
+                metadata: { orderNumber: order.orderNumber },
+            })
+                .catch(() => { });
+        }
+        if (notifyBuyer && buyerId) {
+            this.alertsService
+                .createAlert({
+                userId: buyerId,
+                type: contants_2.AlertType.OrderPlaced,
+                title: 'Order placed 🛍️',
+                message: `We have received your order #${order.orderNumber} for ${itemsSummary}.`,
+                entityId: order._id.toString(),
+                entityType: 'order',
+                metadata: { orderNumber: order.orderNumber },
+            })
+                .catch(() => { });
+        }
+    }
     async create(buyerId, createOrderDto) {
         const { listingId, quantity, shippingAddress, buyerNote } = createOrderDto;
         const listing = await this.listingsService.findById(listingId);
@@ -120,9 +165,11 @@ let OrdersService = class OrdersService {
             paymentStatus: contants_1.PaymentStatus.Pending,
             disbursementStatus: split.sellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
         });
-        return order.save();
+        const saved = await order.save();
+        await this.notifyOrderCreated(saved);
+        return saved;
     }
-    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0) {
+    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, notifyBuyer = true) {
         const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
         let totalPlatformFee = 0;
         let totalSellerPayout = 0;
@@ -181,10 +228,12 @@ let OrdersService = class OrdersService {
             paymentStatus: contants_1.PaymentStatus.Pending,
             disbursementStatus: totalSellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
         });
-        return order.save();
+        const saved = await order.save();
+        await this.notifyOrderCreated(saved, { notifyBuyer });
+        return saved;
     }
     async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0) {
-        const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee);
+        const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee, false);
         order.status = contants_1.OrderStatus.Pending;
         order.paymentStatus = contants_1.PaymentStatus.Pending;
         order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
@@ -439,24 +488,6 @@ let OrdersService = class OrdersService {
             metadata: { orderNumber: order.orderNumber },
         })
             .catch(() => { });
-        const alertedSellers = new Set();
-        for (const item of order.items) {
-            const sellerId = item.sellerId?.toString();
-            if (sellerId && !alertedSellers.has(sellerId)) {
-                alertedSellers.add(sellerId);
-                this.alertsService
-                    .createAlert({
-                    userId: sellerId,
-                    type: contants_2.AlertType.NewOrderReceived,
-                    title: 'New Order Received! 🎉',
-                    message: `You received a new order #${order.orderNumber}. Check your orders for details.`,
-                    entityId: order._id,
-                    entityType: 'order',
-                    metadata: { orderNumber: order.orderNumber },
-                })
-                    .catch(() => { });
-            }
-        }
         return updatedOrder;
     }
     async findByPaymentReference(reference) {

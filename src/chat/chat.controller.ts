@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Param,
   Body,
   Query,
@@ -17,6 +18,7 @@ import { ChatGateway } from './chat.gateway';
 import {
   CreateConversationDto,
   SendMessageDto,
+  EditMessageDto,
   QueryMessagesDto,
   SearchChatDto,
 } from './dto/chat.dto';
@@ -123,6 +125,54 @@ export class ChatController {
     @Query() dto: QueryMessagesDto,
   ) {
     return this.chatService.getMessages(conversationId, user.sub, dto);
+  }
+
+  @Patch('messages/:messageId')
+  @ApiOperation({ summary: 'Edit a message' })
+  @ResponseMessage('Message edited')
+  async editMessage(
+    @GetUser() user: JwtPayload,
+    @Param('messageId') messageId: string,
+    @Body() dto: EditMessageDto,
+  ) {
+    const message = await this.chatService.editMessage(
+      messageId,
+      user.sub,
+      dto.content,
+    );
+
+    // Emit socket event so all participants get real-time updates
+    const server = this.chatGateway.server;
+    if (server) {
+      server
+        .to(`conversation:${message.conversationId.toString()}`)
+        .emit('messageEdited', message.toObject());
+    }
+
+    return message;
+  }
+
+  @Delete('messages/:messageId')
+  @ApiOperation({ summary: 'Delete a message' })
+  @ResponseMessage('Message deleted')
+  async deleteMessage(
+    @GetUser() user: JwtPayload,
+    @Param('messageId') messageId: string,
+  ) {
+    const message = await this.chatService.deleteMessage(messageId, user.sub);
+
+    // Emit socket event so all participants get real-time updates
+    const server = this.chatGateway.server;
+    if (server) {
+      server
+        .to(`conversation:${message.conversationId.toString()}`)
+        .emit('messageDeleted', {
+          conversationId: message.conversationId.toString(),
+          messageId: message._id.toString(),
+        });
+    }
+
+    return message;
   }
 
   // ─── Read Receipts & Unread ────────────────────────────────────

@@ -261,6 +261,23 @@ export class ChatService {
     );
     if (!isParticipant) throw new ForbiddenException('Not a participant');
 
+    // Build denormalized reply snapshot if replying to a message
+    let replySnapshot: {
+      messageId: Types.ObjectId;
+      content: string;
+      senderId: Types.ObjectId;
+    } | null = null;
+    if (dto.replyTo) {
+      const original = await this.messageModel.findById(dto.replyTo).exec();
+      if (original) {
+        replySnapshot = {
+          messageId: original._id,
+          content: original.content,
+          senderId: original.senderId,
+        };
+      }
+    }
+
     const message = await this.messageModel.create({
       conversationId: new Types.ObjectId(conversationId),
       senderId: new Types.ObjectId(senderId),
@@ -277,6 +294,7 @@ export class ChatService {
         : null,
       attachments: dto.attachments || [],
       readBy: [new Types.ObjectId(senderId)], // Sender has "read" their own message
+      replyTo: replySnapshot,
     });
 
     // Update conversation: lastMessage + increment unread for other participants
@@ -337,6 +355,51 @@ export class ChatService {
       data: messages.reverse(), // Return in chronological order
       pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
     };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // EDIT & DELETE
+  // ═══════════════════════════════════════════════════════════════════
+
+  async editMessage(
+    messageId: string,
+    userId: string,
+    content: string,
+  ): Promise<MessageDocument> {
+    const message = await this.messageModel.findById(messageId).exec();
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId.toString() !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+    if (message.isDeleted) {
+      throw new ForbiddenException('Cannot edit a deleted message');
+    }
+
+    message.content = content;
+    message.edited = true;
+    message.editedAt = new Date();
+    await message.save();
+
+    return message;
+  }
+
+  async deleteMessage(
+    messageId: string,
+    userId: string,
+  ): Promise<MessageDocument> {
+    const message = await this.messageModel.findById(messageId).exec();
+    if (!message) throw new NotFoundException('Message not found');
+
+    if (message.senderId.toString() !== userId) {
+      throw new ForbiddenException('You can only delete your own messages');
+    }
+
+    message.isDeleted = true;
+    message.content = '';
+    await message.save();
+
+    return message;
   }
 
   // ═══════════════════════════════════════════════════════════════════

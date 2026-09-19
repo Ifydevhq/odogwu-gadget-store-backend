@@ -6,6 +6,11 @@ declare class Mobile {
     phoneNumber: string;
     isoCode: string;
 }
+declare class PushToken {
+    token: string;
+    platform: string;
+    updatedAt: Date;
+}
 export declare class User extends BaseSchema {
     firstName: string;
     lastName: string;
@@ -31,6 +36,7 @@ export declare class User extends BaseSchema {
         orderUpdates: boolean;
         promotions: boolean;
     };
+    pushTokens: PushToken[];
     passwordResetToken?: string;
     passwordResetExpires?: Date;
 }

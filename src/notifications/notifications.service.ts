@@ -40,6 +40,7 @@ import {
   orderStatusUpdateTemplate,
   listingApprovedTemplate,
   listingRejectedTemplate,
+  broadcastTemplate,
 } from './templates/email-templates';
 
 type EmailProvider = 'resend' | 'nodemailer' | 'none';
@@ -367,6 +368,44 @@ export class NotificationsService {
 
   async sendRawEmail(to: string, subject: string, html: string): Promise<void> {
     await this.send(to, subject, html);
+  }
+
+  // ─── Broadcast / Announcement Emails ─────────────────────
+
+  /**
+   * Sends a branded broadcast email to many recipients (announcements,
+   * promos, etc.). Reuses the existing provider selection via send(), and
+   * chunks recipients so we never blast the provider all at once.
+   */
+  async sendBroadcastEmail(
+    recipients: { email: string; name?: string }[],
+    content: {
+      subject: string;
+      heading: string;
+      body: string;
+      ctaText?: string;
+      ctaUrl?: string;
+      imageUrl?: string;
+    },
+  ): Promise<{ sent: number }> {
+    const valid = (recipients || []).filter((r) => r && r.email);
+    if (valid.length === 0) return { sent: 0 };
+
+    const { subject, html } = broadcastTemplate(this.brand, content);
+
+    const chunkSize = 50;
+    let sent = 0;
+    for (let i = 0; i < valid.length; i += chunkSize) {
+      const chunk = valid.slice(i, i + chunkSize);
+      await Promise.all(
+        chunk.map(async (r) => {
+          await this.send(r.email, subject, html);
+          sent += 1;
+        }),
+      );
+    }
+
+    return { sent };
   }
 
   // ═══════════════════════════════════════════════════════════

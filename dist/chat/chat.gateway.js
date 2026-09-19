@@ -79,6 +79,7 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
                 type: data.type,
                 productCard: data.productCard,
                 attachments: data.attachments,
+                replyTo: data.replyTo,
             });
             this.server.to(`conversation:${data.conversationId}`).emit('newMessage', {
                 message: message.toObject(),
@@ -122,6 +123,41 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
         }
         catch (err) {
             this.logger.error(`sendMessage error: ${err.message}`);
+            return { success: false, error: err.message };
+        }
+    }
+    async handleEditMessage(client, data) {
+        const userId = client.data.user?.sub;
+        if (!userId)
+            return;
+        try {
+            const message = await this.chatService.editMessage(data.messageId, userId, data.content);
+            this.server
+                .to(`conversation:${message.conversationId.toString()}`)
+                .emit('messageEdited', message.toObject());
+            return { success: true, message: message.toObject() };
+        }
+        catch (err) {
+            this.logger.error(`editMessage error: ${err.message}`);
+            return { success: false, error: err.message };
+        }
+    }
+    async handleDeleteMessage(client, data) {
+        const userId = client.data.user?.sub;
+        if (!userId)
+            return;
+        try {
+            const message = await this.chatService.deleteMessage(data.messageId, userId);
+            this.server
+                .to(`conversation:${message.conversationId.toString()}`)
+                .emit('messageDeleted', {
+                conversationId: message.conversationId.toString(),
+                messageId: message._id.toString(),
+            });
+            return { success: true };
+        }
+        catch (err) {
+            this.logger.error(`deleteMessage error: ${err.message}`);
             return { success: false, error: err.message };
         }
     }
@@ -220,6 +256,22 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleSendMessage", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('editMessage'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleEditMessage", null);
+__decorate([
+    (0, websockets_1.SubscribeMessage)('deleteMessage'),
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __param(1, (0, websockets_1.MessageBody)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:returntype", Promise)
+], ChatGateway.prototype, "handleDeleteMessage", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('joinConversation'),
     __param(0, (0, websockets_1.ConnectedSocket)()),

@@ -1,0 +1,86 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ANNOUNCEMENT_TEMPLATES = void 0;
+exports.ANNOUNCEMENT_TEMPLATES = [
+    {
+        id: 'flash_sale',
+        name: 'Flash Sale / Promo',
+        category: 'Promotions',
+        title: '⚡ Flash Sale is LIVE!',
+        message: 'For the next 24 hours only, enjoy massive discounts on laptops, phones and accessories at Odogwu Gadget Store. Grab your favourite gadget before the deals run out!',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'new_arrivals',
+        name: 'New Arrivals',
+        category: 'Catalog',
+        title: '🆕 Fresh Gadgets Just Landed',
+        message: 'The latest laptops, smartphones and accessories have just arrived at Odogwu Gadget Store. Be the first to shop the newest tech.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'back_in_stock',
+        name: 'Back in Stock Reminder',
+        category: 'Catalog',
+        title: '🔁 It’s Back in Stock',
+        message: 'Good news! An item you were eyeing is available again. Head over to Odogwu Gadget Store and check out before it sells out again.',
+        suggestedChannels: ['in_app', 'push'],
+    },
+    {
+        id: 'abandoned_cart',
+        name: 'Abandoned Cart Reminder',
+        category: 'Retention',
+        title: '🛒 You Left Something Behind',
+        message: 'Your cart is waiting for you at Odogwu Gadget Store. Complete your order now before your items sell out.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'shipping_reminder',
+        name: 'Order Shipping Reminder',
+        category: 'Orders',
+        title: '📦 Your Order is On the Way',
+        message: 'Great news — your order from Odogwu Gadget Store has been shipped and is on its way to you. Track your delivery from your orders page.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'weekend_deal',
+        name: 'Weekend Deal',
+        category: 'Promotions',
+        title: '🎉 Weekend Deals You’ll Love',
+        message: 'The weekend just got better! Enjoy special weekend-only prices on top gadgets at Odogwu Gadget Store. Deals end Sunday night.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'holiday_greeting',
+        name: 'Holiday Greeting',
+        category: 'Seasonal',
+        title: '🎄 Season’s Greetings from Odogwu Gadget Store',
+        message: 'Wishing you and your loved ones a joyful holiday season. Thank you for shopping with Odogwu Gadget Store — here’s to more great tech in the new year!',
+        suggestedChannels: ['in_app', 'email'],
+    },
+    {
+        id: 'price_drop',
+        name: 'Price Drop',
+        category: 'Promotions',
+        title: '💸 Price Drop Alert',
+        message: 'Prices just dropped on selected gadgets at Odogwu Gadget Store. Now is the perfect time to get that laptop or phone you’ve wanted at a better price.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+    {
+        id: 'restock_alert',
+        name: 'Restock Alert',
+        category: 'Catalog',
+        title: '📥 Restocked & Ready',
+        message: 'We’ve restocked some of our most popular gadgets. Shop now at Odogwu Gadget Store while supplies last.',
+        suggestedChannels: ['in_app', 'push'],
+    },
+    {
+        id: 'loyalty',
+        name: 'Membership / Loyalty Announcement',
+        category: 'Loyalty',
+        title: '⭐ A Reward Just for You',
+        message: 'As a valued Odogwu Gadget Store customer, you’ve unlocked exclusive perks and rewards. Log in to see what’s waiting for you.',
+        suggestedChannels: ['in_app', 'push', 'email'],
+    },
+];
+//# sourceMappingURL=announcement-templates.js.map

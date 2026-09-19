@@ -23,6 +23,7 @@ const update_profile_dto_1 = require("./dto/update-profile.dto");
 const delete_account_dto_1 = require("./dto/delete-account.dto");
 const change_password_dto_1 = require("./dto/change-password.dto");
 const update_notification_preferences_dto_1 = require("./dto/update-notification-preferences.dto");
+const push_token_dto_1 = require("./dto/push-token.dto");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
@@ -43,6 +44,12 @@ let UsersController = class UsersController {
     }
     async updateNotificationPreferences(user, updateDto) {
         return this.usersService.updateNotificationPreferences(user.sub, updateDto);
+    }
+    async addPushToken(user, dto) {
+        return this.usersService.addPushToken(user.sub, dto.token, dto.platform);
+    }
+    async removePushToken(user, dto) {
+        return this.usersService.removePushToken(user.sub, dto.token);
     }
 };
 exports.UsersController = UsersController;
@@ -105,6 +112,28 @@ __decorate([
     __metadata("design:paramtypes", [Object, update_notification_preferences_dto_1.UpdateNotificationPreferencesDto]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateNotificationPreferences", null);
+__decorate([
+    (0, common_1.Post)('me/push-tokens'),
+    (0, response_message_decorator_1.ResponseMessage)('Push token registered'),
+    (0, swagger_1.ApiOperation)({ summary: 'Register a device push token' }),
+    (0, swagger_1.ApiResponse)({ status: 201, description: 'Push token registered' }),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, push_token_dto_1.RegisterPushTokenDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "addPushToken", null);
+__decorate([
+    (0, common_1.Delete)('me/push-tokens'),
+    (0, response_message_decorator_1.ResponseMessage)('Push token removed'),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a device push token' }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Push token removed' }),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, push_token_dto_1.RemovePushTokenDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "removePushToken", null);
 exports.UsersController = UsersController = __decorate([
     (0, swagger_1.ApiTags)('users'),
     (0, common_1.Controller)('users'),

@@ -71,6 +71,29 @@ let ChatController = class ChatController {
     async getMessages(user, conversationId, dto) {
         return this.chatService.getMessages(conversationId, user.sub, dto);
     }
+    async editMessage(user, messageId, dto) {
+        const message = await this.chatService.editMessage(messageId, user.sub, dto.content);
+        const server = this.chatGateway.server;
+        if (server) {
+            server
+                .to(`conversation:${message.conversationId.toString()}`)
+                .emit('messageEdited', message.toObject());
+        }
+        return message;
+    }
+    async deleteMessage(user, messageId) {
+        const message = await this.chatService.deleteMessage(messageId, user.sub);
+        const server = this.chatGateway.server;
+        if (server) {
+            server
+                .to(`conversation:${message.conversationId.toString()}`)
+                .emit('messageDeleted', {
+                conversationId: message.conversationId.toString(),
+                messageId: message._id.toString(),
+            });
+        }
+        return message;
+    }
     async markAsRead(user, conversationId) {
         const result = await this.chatService.markAsRead(conversationId, user.sub);
         const server = this.chatGateway.server;
@@ -149,6 +172,27 @@ __decorate([
     __metadata("design:paramtypes", [Object, String, chat_dto_1.QueryMessagesDto]),
     __metadata("design:returntype", Promise)
 ], ChatController.prototype, "getMessages", null);
+__decorate([
+    (0, common_1.Patch)('messages/:messageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Edit a message' }),
+    (0, response_message_decorator_1.ResponseMessage)('Message edited'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __param(2, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String, chat_dto_1.EditMessageDto]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "editMessage", null);
+__decorate([
+    (0, common_1.Delete)('messages/:messageId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete a message' }),
+    (0, response_message_decorator_1.ResponseMessage)('Message deleted'),
+    __param(0, (0, get_user_decorator_1.GetUser)()),
+    __param(1, (0, common_1.Param)('messageId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", Promise)
+], ChatController.prototype, "deleteMessage", null);
 __decorate([
     (0, common_1.Patch)('conversations/:id/read'),
     (0, swagger_1.ApiOperation)({ summary: 'Mark conversation as read' }),

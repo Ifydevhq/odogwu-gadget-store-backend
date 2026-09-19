@@ -37,6 +37,8 @@ const delivery_zones_module_1 = require("./delivery-zones/delivery-zones.module"
 const disputes_module_1 = require("./disputes/disputes.module");
 const alerts_module_1 = require("./alerts/alerts.module");
 const chat_module_1 = require("./chat/chat.module");
+const push_module_1 = require("./push/push.module");
+const announcements_module_1 = require("./announcements/announcements.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -84,6 +86,8 @@ exports.AppModule = AppModule = __decorate([
             disputes_module_1.DisputesModule,
             alerts_module_1.AlertsModule,
             chat_module_1.ChatModule,
+            push_module_1.PushModule,
+            announcements_module_1.AnnouncementsModule,
         ],
         controllers: [app_controller_1.AppController],
     })

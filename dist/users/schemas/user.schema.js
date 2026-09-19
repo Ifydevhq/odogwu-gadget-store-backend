@@ -16,6 +16,8 @@ const contants_1 = require("../../config/contants");
 const base_schema_1 = require("../../common/schemas/base-schema");
 class Mobile {
 }
+class PushToken {
+}
 let User = class User extends base_schema_1.BaseSchema {
 };
 exports.User = User;
@@ -128,6 +130,19 @@ __decorate([
     }),
     __metadata("design:type", Object)
 ], User.prototype, "notificationPreferences", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [
+            {
+                token: { type: String, required: true },
+                platform: { type: String, default: 'web' },
+                updatedAt: { type: Date, default: Date.now },
+            },
+        ],
+        default: [],
+    }),
+    __metadata("design:type", Array)
+], User.prototype, "pushTokens", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ select: false }),
     __metadata("design:type", String)

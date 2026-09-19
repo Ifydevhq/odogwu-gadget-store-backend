@@ -18,4 +18,6 @@ export declare class UsersService {
     deleteAccount(userId: string, password: string): Promise<void>;
     changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<void>;
     updateNotificationPreferences(userId: string, updateDto: UpdateNotificationPreferencesDto): Promise<UserDocument>;
+    addPushToken(userId: string, token: string, platform: string): Promise<UserDocument>;
+    removePushToken(userId: string, token: string): Promise<UserDocument>;
 }

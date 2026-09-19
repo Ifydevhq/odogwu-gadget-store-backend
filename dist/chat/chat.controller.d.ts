@@ -1,7 +1,7 @@
 import { JwtPayload } from '@common/decorators/get-user.decorator';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
-import { CreateConversationDto, SendMessageDto, QueryMessagesDto, SearchChatDto } from './dto/chat.dto';
+import { CreateConversationDto, SendMessageDto, EditMessageDto, QueryMessagesDto, SearchChatDto } from './dto/chat.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 export declare class ChatController {
     private readonly chatService;
@@ -38,6 +38,8 @@ export declare class ChatController {
             totalPages: number;
         };
     }>;
+    editMessage(user: JwtPayload, messageId: string, dto: EditMessageDto): Promise<import("./schemas/message.schema").MessageDocument>;
+    deleteMessage(user: JwtPayload, messageId: string): Promise<import("./schemas/message.schema").MessageDocument>;
     markAsRead(user: JwtPayload, conversationId: string): Promise<{
         success: boolean;
     }>;

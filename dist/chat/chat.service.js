@@ -197,6 +197,17 @@ let ChatService = ChatService_1 = class ChatService {
         const isParticipant = conversation.participants.some((p) => p.toString() === senderId);
         if (!isParticipant)
             throw new common_1.ForbiddenException('Not a participant');
+        let replySnapshot = null;
+        if (dto.replyTo) {
+            const original = await this.messageModel.findById(dto.replyTo).exec();
+            if (original) {
+                replySnapshot = {
+                    messageId: original._id,
+                    content: original.content,
+                    senderId: original.senderId,
+                };
+            }
+        }
         const message = await this.messageModel.create({
             conversationId: new mongoose_2.Types.ObjectId(conversationId),
             senderId: new mongoose_2.Types.ObjectId(senderId),
@@ -213,6 +224,7 @@ let ChatService = ChatService_1 = class ChatService {
                 : null,
             attachments: dto.attachments || [],
             readBy: [new mongoose_2.Types.ObjectId(senderId)],
+            replyTo: replySnapshot,
         });
         const otherParticipants = conversation.participants.filter((p) => p.toString() !== senderId);
         const unreadUpdates = {};
@@ -259,6 +271,34 @@ let ChatService = ChatService_1 = class ChatService {
             data: messages.reverse(),
             pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
         };
+    }
+    async editMessage(messageId, userId, content) {
+        const message = await this.messageModel.findById(messageId).exec();
+        if (!message)
+            throw new common_1.NotFoundException('Message not found');
+        if (message.senderId.toString() !== userId) {
+            throw new common_1.ForbiddenException('You can only edit your own messages');
+        }
+        if (message.isDeleted) {
+            throw new common_1.ForbiddenException('Cannot edit a deleted message');
+        }
+        message.content = content;
+        message.edited = true;
+        message.editedAt = new Date();
+        await message.save();
+        return message;
+    }
+    async deleteMessage(messageId, userId) {
+        const message = await this.messageModel.findById(messageId).exec();
+        if (!message)
+            throw new common_1.NotFoundException('Message not found');
+        if (message.senderId.toString() !== userId) {
+            throw new common_1.ForbiddenException('You can only delete your own messages');
+        }
+        message.isDeleted = true;
+        message.content = '';
+        await message.save();
+        return message;
     }
     async markAsRead(conversationId, userId) {
         const userObjId = new mongoose_2.Types.ObjectId(userId);

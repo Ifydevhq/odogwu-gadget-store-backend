@@ -24,6 +24,7 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -40,6 +41,10 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
+import {
+  RegisterPushTokenDto,
+  RemovePushTokenDto,
+} from './dto/push-token.dto';
 
 @ApiTags('users')
 @Controller('users')
@@ -117,5 +122,31 @@ export class UsersController {
     @Body() updateDto: UpdateNotificationPreferencesDto,
   ) {
     return this.usersService.updateNotificationPreferences(user.sub, updateDto);
+  }
+
+  // ─── POST /api/v1/users/me/push-tokens ────────────────
+
+  @Post('me/push-tokens')
+  @ResponseMessage('Push token registered')
+  @ApiOperation({ summary: 'Register a device push token' })
+  @ApiResponse({ status: 201, description: 'Push token registered' })
+  async addPushToken(
+    @GetUser() user: JwtPayload,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    return this.usersService.addPushToken(user.sub, dto.token, dto.platform);
+  }
+
+  // ─── DELETE /api/v1/users/me/push-tokens ──────────────
+
+  @Delete('me/push-tokens')
+  @ResponseMessage('Push token removed')
+  @ApiOperation({ summary: 'Remove a device push token' })
+  @ApiResponse({ status: 200, description: 'Push token removed' })
+  async removePushToken(
+    @GetUser() user: JwtPayload,
+    @Body() dto: RemovePushTokenDto,
+  ) {
+    return this.usersService.removePushToken(user.sub, dto.token);
   }
 }

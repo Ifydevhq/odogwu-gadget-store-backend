@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SearchChatDto = exports.QueryMessagesDto = exports.SendMessageDto = exports.CreateConversationDto = void 0;
+exports.SearchChatDto = exports.QueryMessagesDto = exports.EditMessageDto = exports.SendMessageDto = exports.CreateConversationDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 const class_transformer_1 = require("class-transformer");
@@ -126,6 +126,20 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Object)
 ], SendMessageDto.prototype, "metadata", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'ID of the message being replied to' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], SendMessageDto.prototype, "replyTo", void 0);
+class EditMessageDto {
+}
+exports.EditMessageDto = EditMessageDto;
+__decorate([
+    (0, swagger_1.ApiProperty)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], EditMessageDto.prototype, "content", void 0);
 class QueryMessagesDto extends pagination_dto_1.PaginationDto {
 }
 exports.QueryMessagesDto = QueryMessagesDto;
