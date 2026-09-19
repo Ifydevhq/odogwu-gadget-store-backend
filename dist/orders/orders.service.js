@@ -599,6 +599,15 @@ let OrdersService = class OrdersService {
             };
         }
         if (status === contants_1.OrderStatus.Completed) {
+            if (order.paymentStatus !== contants_1.PaymentStatus.Success) {
+                order.paymentStatus = contants_1.PaymentStatus.Success;
+                order.paymentInfo = {
+                    ...order.paymentInfo,
+                    method: order.paymentInfo?.method || 'pay_on_delivery',
+                    status: 'success',
+                    paidAt: order.paymentInfo?.paidAt || new Date(),
+                };
+            }
             if (order.disbursementStatus === 'awaiting_completion') {
                 order.disbursementStatus = 'awaiting_disbursement';
             }

@@ -1015,6 +1015,19 @@ export class OrdersService {
 
     // Auto-transition disbursement status when order completes
     if (status === OrderStatus.Completed) {
+      // A completed order is, by definition, paid — the store owner confirms
+      // payment before completing. Guarantee the invariant even if the client
+      // did not also pass paymentStatus, so completed orders always read "paid"
+      // (and the buyer still gets their receipt via the dispatch below).
+      if (order.paymentStatus !== PaymentStatus.Success) {
+        order.paymentStatus = PaymentStatus.Success;
+        order.paymentInfo = {
+          ...order.paymentInfo,
+          method: order.paymentInfo?.method || 'pay_on_delivery',
+          status: 'success',
+          paidAt: order.paymentInfo?.paidAt || new Date(),
+        };
+      }
       if (order.disbursementStatus === 'awaiting_completion') {
         order.disbursementStatus = 'awaiting_disbursement';
       }
