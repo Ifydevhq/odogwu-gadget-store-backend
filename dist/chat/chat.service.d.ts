@@ -2,19 +2,22 @@ import { Model, Types } from 'mongoose';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { CreateConversationDto, SendMessageDto, QueryMessagesDto } from './dto/chat.dto';
+import { PushService } from '../push/push.service';
 export declare class ChatService {
     private conversationModel;
     private messageModel;
+    private readonly pushService?;
     private readonly logger;
-    constructor(conversationModel: Model<ConversationDocument>, messageModel: Model<MessageDocument>);
+    constructor(conversationModel: Model<ConversationDocument>, messageModel: Model<MessageDocument>, pushService?: PushService);
     private getParticipantDisplayInfo;
+    private peerDetails;
+    private buildPeer;
+    private pushNewMessage;
     createOrGetConversation(userId: string, dto: CreateConversationDto): Promise<import("mongoose").Document<unknown, {}, ConversationDocument> & Conversation & import("mongoose").Document<any, any, any> & {
         _id: Types.ObjectId;
     }>;
     getConversations(userId: string, page?: number, perPage?: number): Promise<{
-        data: (import("mongoose").FlattenMaps<ConversationDocument> & {
-            _id: Types.ObjectId;
-        })[];
+        data: any[];
         pagination: {
             page: number;
             perPage: number;
@@ -22,9 +25,7 @@ export declare class ChatService {
             totalPages: number;
         };
     }>;
-    getConversation(conversationId: string, userId: string): Promise<import("mongoose").Document<unknown, {}, ConversationDocument> & Conversation & import("mongoose").Document<any, any, any> & {
-        _id: Types.ObjectId;
-    }>;
+    getConversation(conversationId: string, userId: string): Promise<any>;
     sendMessage(conversationId: string, senderId: string, dto: SendMessageDto): Promise<import("mongoose").Document<unknown, {}, MessageDocument> & Message & import("mongoose").Document<any, any, any> & {
         _id: Types.ObjectId;
     }>;

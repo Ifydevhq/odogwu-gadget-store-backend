@@ -87,9 +87,10 @@ let OrdersService = class OrdersService {
         const itemsSummary = order.items.length === 1
             ? order.items[0].itemName
             : `${order.items.length} items`;
+        const orderRoute = `/orders/${order._id.toString()}`;
         for (const sellerId of sellerIds) {
             this.alertsService
-                .createAlert({
+                .createAlertAndPush({
                 userId: sellerId,
                 type: contants_2.AlertType.NewOrderReceived,
                 title: 'New Order Received! 🎉',
@@ -97,12 +98,13 @@ let OrdersService = class OrdersService {
                 entityId: order._id.toString(),
                 entityType: 'order',
                 metadata: { orderNumber: order.orderNumber },
+                route: orderRoute,
             })
                 .catch(() => { });
         }
         if (notifyBuyer && buyerId) {
             this.alertsService
-                .createAlert({
+                .createAlertAndPush({
                 userId: buyerId,
                 type: contants_2.AlertType.OrderPlaced,
                 title: 'Order placed 🛍️',
@@ -110,6 +112,7 @@ let OrdersService = class OrdersService {
                 entityId: order._id.toString(),
                 entityType: 'order',
                 metadata: { orderNumber: order.orderNumber },
+                route: orderRoute,
             })
                 .catch(() => { });
         }
@@ -596,6 +599,15 @@ let OrdersService = class OrdersService {
             };
         }
         if (status === contants_1.OrderStatus.Completed) {
+            if (order.paymentStatus !== contants_1.PaymentStatus.Success) {
+                order.paymentStatus = contants_1.PaymentStatus.Success;
+                order.paymentInfo = {
+                    ...order.paymentInfo,
+                    method: order.paymentInfo?.method || 'pay_on_delivery',
+                    status: 'success',
+                    paidAt: order.paymentInfo?.paidAt || new Date(),
+                };
+            }
             if (order.disbursementStatus === 'awaiting_completion') {
                 order.disbursementStatus = 'awaiting_disbursement';
             }
@@ -656,12 +668,13 @@ let OrdersService = class OrdersService {
         const alertConfig = statusAlertMap[status];
         if (alertConfig) {
             this.alertsService
-                .createAlert({
+                .createAlertAndPush({
                 userId: order.buyerId.toString(),
                 ...alertConfig,
                 entityId: order._id,
                 entityType: 'order',
                 metadata: { orderNumber: order.orderNumber, status },
+                route: `/orders/${order._id.toString()}`,
             })
                 .catch(() => { });
         }

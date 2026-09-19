@@ -189,9 +189,11 @@ export class OrdersService {
         ? order.items[0].itemName
         : `${order.items.length} items`;
 
+    const orderRoute = `/orders/${order._id.toString()}`;
+
     for (const sellerId of sellerIds) {
       this.alertsService
-        .createAlert({
+        .createAlertAndPush({
           userId: sellerId,
           type: AlertType.NewOrderReceived,
           title: 'New Order Received! 🎉',
@@ -199,13 +201,14 @@ export class OrdersService {
           entityId: order._id.toString(),
           entityType: 'order',
           metadata: { orderNumber: order.orderNumber },
+          route: orderRoute,
         })
         .catch(() => {});
     }
 
     if (notifyBuyer && buyerId) {
       this.alertsService
-        .createAlert({
+        .createAlertAndPush({
           userId: buyerId,
           type: AlertType.OrderPlaced,
           title: 'Order placed 🛍️',
@@ -213,6 +216,7 @@ export class OrdersService {
           entityId: order._id.toString(),
           entityType: 'order',
           metadata: { orderNumber: order.orderNumber },
+          route: orderRoute,
         })
         .catch(() => {});
     }
@@ -1011,6 +1015,19 @@ export class OrdersService {
 
     // Auto-transition disbursement status when order completes
     if (status === OrderStatus.Completed) {
+      // A completed order is, by definition, paid — the store owner confirms
+      // payment before completing. Guarantee the invariant even if the client
+      // did not also pass paymentStatus, so completed orders always read "paid"
+      // (and the buyer still gets their receipt via the dispatch below).
+      if (order.paymentStatus !== PaymentStatus.Success) {
+        order.paymentStatus = PaymentStatus.Success;
+        order.paymentInfo = {
+          ...order.paymentInfo,
+          method: order.paymentInfo?.method || 'pay_on_delivery',
+          status: 'success',
+          paidAt: order.paymentInfo?.paidAt || new Date(),
+        };
+      }
       if (order.disbursementStatus === 'awaiting_completion') {
         order.disbursementStatus = 'awaiting_disbursement';
       }
@@ -1088,12 +1105,13 @@ export class OrdersService {
     const alertConfig = statusAlertMap[status];
     if (alertConfig) {
       this.alertsService
-        .createAlert({
+        .createAlertAndPush({
           userId: order.buyerId.toString(),
           ...alertConfig,
           entityId: order._id,
           entityType: 'order',
           metadata: { orderNumber: order.orderNumber, status },
+          route: `/orders/${order._id.toString()}`,
         })
         .catch(() => {});
     }

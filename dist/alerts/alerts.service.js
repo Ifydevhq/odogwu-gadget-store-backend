@@ -18,9 +18,11 @@ const common_1 = require("@nestjs/common");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const alert_schema_1 = require("./schemas/alert.schema");
+const push_service_1 = require("../push/push.service");
 let AlertsService = AlertsService_1 = class AlertsService {
-    constructor(alertModel) {
+    constructor(alertModel, pushService) {
         this.alertModel = alertModel;
+        this.pushService = pushService;
         this.logger = new common_1.Logger(AlertsService_1.name);
     }
     async createAlert(params) {
@@ -40,6 +42,24 @@ let AlertsService = AlertsService_1 = class AlertsService {
         catch (error) {
             this.logger.error(`Failed to create alert [${params.type}] for user ${params.userId}: ${error.message}`);
             return null;
+        }
+    }
+    async createAlertAndPush(params) {
+        const { route, ...alertParams } = params;
+        await this.createAlert(alertParams);
+        try {
+            await this.pushService?.sendToUsers([String(params.userId)], {
+                title: params.title,
+                body: params.message,
+                data: {
+                    type: String(params.type),
+                    entityId: params.entityId ? String(params.entityId) : '',
+                    ...(route ? { route } : {}),
+                },
+            });
+        }
+        catch (err) {
+            this.logger.error(`Push for alert [${params.type}] failed: ${err?.message}`);
         }
     }
     async createBulkAlerts(userIds, params) {
@@ -114,6 +134,8 @@ exports.AlertsService = AlertsService;
 exports.AlertsService = AlertsService = AlertsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(alert_schema_1.Alert.name)),
-    __metadata("design:paramtypes", [mongoose_2.Model])
+    __param(1, (0, common_1.Optional)()),
+    __metadata("design:paramtypes", [mongoose_2.Model,
+        push_service_1.PushService])
 ], AlertsService);
 //# sourceMappingURL=alerts.service.js.map

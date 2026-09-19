@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Alert, AlertDocument } from './schemas/alert.schema';
 import { AlertType } from '../config/contants';
 import { GetAlertsDto } from './dto/alert.dto';
+import { PushService } from '../push/push.service';
 
 @Injectable()
 export class AlertsService {
@@ -11,6 +12,8 @@ export class AlertsService {
 
   constructor(
     @InjectModel(Alert.name) private readonly alertModel: Model<AlertDocument>,
+    // Optional so alert creation still works even if push is unavailable.
+    @Optional() private readonly pushService?: PushService,
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════
@@ -53,6 +56,30 @@ export class AlertsService {
         `Failed to create alert [${params.type}] for user ${params.userId}: ${error.message}`,
       );
       return null;
+    }
+  }
+
+  // Creates the in-app alert AND sends a matching remote push (FCM) to the
+  // user's registered devices. Push is best-effort and never throws, so it
+  // cannot break the operation that triggered the notification. `route` becomes
+  // the deep-link the client opens when the push/notification is tapped.
+  async createAlertAndPush(
+    params: Parameters<AlertsService['createAlert']>[0] & { route?: string },
+  ): Promise<void> {
+    const { route, ...alertParams } = params;
+    await this.createAlert(alertParams);
+    try {
+      await this.pushService?.sendToUsers([String(params.userId)], {
+        title: params.title,
+        body: params.message,
+        data: {
+          type: String(params.type),
+          entityId: params.entityId ? String(params.entityId) : '',
+          ...(route ? { route } : {}),
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Push for alert [${params.type}] failed: ${err?.message}`);
     }
   }
 
