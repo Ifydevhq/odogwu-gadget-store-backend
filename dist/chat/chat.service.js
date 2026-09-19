@@ -19,10 +19,12 @@ const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const conversation_schema_1 = require("./schemas/conversation.schema");
 const message_schema_1 = require("./schemas/message.schema");
+const push_service_1 = require("../push/push.service");
 let ChatService = ChatService_1 = class ChatService {
-    constructor(conversationModel, messageModel) {
+    constructor(conversationModel, messageModel, pushService) {
         this.conversationModel = conversationModel;
         this.messageModel = messageModel;
+        this.pushService = pushService;
         this.logger = new common_1.Logger(ChatService_1.name);
     }
     async getParticipantDisplayInfo(userId, typeHint) {
@@ -122,6 +124,32 @@ let ChatService = ChatService_1 = class ChatService {
             email: (populated && populated.email) || undefined,
             isOnline: false,
         };
+    }
+    async pushNewMessage(conversation, senderId, dto, conversationId) {
+        if (!this.pushService)
+            return;
+        try {
+            const recipientIds = conversation.participants
+                .map((p) => p.toString())
+                .filter((pid) => pid !== senderId);
+            if (!recipientIds.length)
+                return;
+            const sender = await this.getParticipantDisplayInfo(senderId);
+            const isProduct = dto.type === 'product_card' || !!dto.productCard;
+            const body = isProduct ? '📦 Sent a product' : dto.content || 'New message';
+            await this.pushService.sendToUsers(recipientIds, {
+                title: sender.displayName || 'New message',
+                body,
+                data: {
+                    type: 'chat',
+                    route: `/chats/${conversationId}`,
+                    conversationId,
+                },
+            });
+        }
+        catch (err) {
+            this.logger.error(`Chat push failed: ${err?.message}`);
+        }
     }
     async createOrGetConversation(userId, dto) {
         const participantId = dto.participantId;
@@ -307,6 +335,7 @@ let ChatService = ChatService_1 = class ChatService {
             },
             $inc: unreadUpdates,
         }).exec();
+        void this.pushNewMessage(conversation, senderId, dto, conversationId);
         return message;
     }
     async getMessages(conversationId, userId, dto) {
@@ -417,7 +446,9 @@ exports.ChatService = ChatService = ChatService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(conversation_schema_1.Conversation.name)),
     __param(1, (0, mongoose_1.InjectModel)(message_schema_1.Message.name)),
+    __param(2, (0, common_1.Optional)()),
     __metadata("design:paramtypes", [mongoose_2.Model,
-        mongoose_2.Model])
+        mongoose_2.Model,
+        push_service_1.PushService])
 ], ChatService);
 //# sourceMappingURL=chat.service.js.map

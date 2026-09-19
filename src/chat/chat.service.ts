@@ -1,9 +1,10 @@
-import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Optional } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Conversation, ConversationDocument } from './schemas/conversation.schema';
 import { Message, MessageDocument } from './schemas/message.schema';
 import { CreateConversationDto, SendMessageDto, QueryMessagesDto } from './dto/chat.dto';
+import { PushService } from '../push/push.service';
 
 @Injectable()
 export class ChatService {
@@ -12,6 +13,8 @@ export class ChatService {
   constructor(
     @InjectModel(Conversation.name) private conversationModel: Model<ConversationDocument>,
     @InjectModel(Message.name) private messageModel: Model<MessageDocument>,
+    // Optional so messaging still works if push is unavailable.
+    @Optional() private readonly pushService?: PushService,
   ) {}
 
   // Look up display info for a user (checks creator and store profiles)
@@ -153,6 +156,37 @@ export class ChatService {
       email: (populated && populated.email) || undefined,
       isOnline: false,
     };
+  }
+
+  // Sends a remote push to every participant except the sender, so a new
+  // message reaches an offline recipient (and surfaces on a foregrounded app).
+  private async pushNewMessage(
+    conversation: ConversationDocument,
+    senderId: string,
+    dto: SendMessageDto,
+    conversationId: string,
+  ): Promise<void> {
+    if (!this.pushService) return;
+    try {
+      const recipientIds = conversation.participants
+        .map((p) => p.toString())
+        .filter((pid) => pid !== senderId);
+      if (!recipientIds.length) return;
+      const sender = await this.getParticipantDisplayInfo(senderId);
+      const isProduct = dto.type === 'product_card' || !!dto.productCard;
+      const body = isProduct ? '📦 Sent a product' : dto.content || 'New message';
+      await this.pushService.sendToUsers(recipientIds, {
+        title: sender.displayName || 'New message',
+        body,
+        data: {
+          type: 'chat',
+          route: `/chats/${conversationId}`,
+          conversationId,
+        },
+      });
+    } catch (err) {
+      this.logger.error(`Chat push failed: ${err?.message}`);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -391,6 +425,10 @@ export class ChatService {
       },
       $inc: unreadUpdates,
     }).exec();
+
+    // Best-effort remote push to the other participant(s). Fire-and-forget so a
+    // slow or disabled push never delays the message send.
+    void this.pushNewMessage(conversation, senderId, dto, conversationId);
 
     return message;
   }
