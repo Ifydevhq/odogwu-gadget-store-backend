@@ -135,6 +135,17 @@ __decorate([
     __metadata("design:type", PriceInfoDto)
 ], CreateListingDto.prototype, "askingPrice", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 2000000,
+        description: 'Optional former/original price in kobo. When higher than the asking ' +
+            '(selling) price it is struck through on the marketplace and the ' +
+            'discount percent is auto-calculated.',
+    }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateListingDto.prototype, "formerPrice", void 0);
+__decorate([
     (0, swagger_1.ApiProperty)({
         type: [MediaItemDto],
         description: 'At least 1 image required, max 10',

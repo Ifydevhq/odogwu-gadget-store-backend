@@ -20,9 +20,9 @@ export declare class ListingsService {
     private calculateListingFee;
     private getConsignmentCommissionRate;
     private verifyOwnership;
-    create(userId: string, createListingDto: CreateListingDto): Promise<ListingDocument>;
+    create(userId: string, createListingDto: CreateListingDto, creatorRole?: string): Promise<ListingDocument>;
     findById(listingId: string): Promise<ListingDocument>;
-    update(listingId: string, userId: string, updateListingDto: UpdateListingDto): Promise<ListingDocument>;
+    update(listingId: string, userId: string, updateListingDto: UpdateListingDto, editorRole?: string): Promise<ListingDocument>;
     remove(listingId: string, userId: string): Promise<{
         message: string;
     }>;

@@ -44,7 +44,7 @@ import {
   AdminReviewListingDto,
   QueryListingsDto,
 } from './dto/listing.dto';
-import { ListingType, ListingStatus } from '@config/contants';
+import { ListingType, ListingStatus, UserRole } from '@config/contants';
 import { PaginatedResponse } from '@common/interfaces/paginated-response.interface';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AlertsService } from '../alerts/alerts.service';
@@ -146,8 +146,26 @@ export class ListingsService {
   async create(
     userId: string,
     createListingDto: CreateListingDto,
+    creatorRole?: string,
   ): Promise<ListingDocument> {
-    const { storeId, type, whatsappNumber } = createListingDto;
+    const { storeId, type, whatsappNumber, formerPrice } = createListingDto;
+
+    // The store owner (super-admin) and admins skip the review queue — their
+    // listings go straight live. Everyone else starts in review.
+    const skipReview =
+      creatorRole === UserRole.SuperAdmin || creatorRole === UserRole.Admin;
+
+    // Optional former price: struck through on the marketplace, with the
+    // discount percent auto-calculated from the asking (selling) price.
+    const sellingAmount = createListingDto.askingPrice?.amount ?? 0;
+    let formerPriceKobo: number | undefined;
+    let discountPercent: number | undefined;
+    if (formerPrice && sellingAmount > 0 && formerPrice > sellingAmount) {
+      formerPriceKobo = formerPrice;
+      discountPercent = Math.round(
+        ((formerPrice - sellingAmount) / formerPrice) * 100,
+      );
+    }
 
     let store: any = null;
 
@@ -202,11 +220,18 @@ export class ListingsService {
       storeId: storeId ? new Types.ObjectId(storeId) : null,
       creatorId: creator._id,
       userId: new Types.ObjectId(userId),
-      status: ListingStatus.InReview,
       // Fall back to store/creator WhatsApp if not provided
       whatsappNumber:
         whatsappNumber || store?.whatsappNumber || creator.whatsappNumber,
       ...selfListingFeeData,
+      // Overrides — must come last so they win over the spreads above.
+      status: skipReview ? ListingStatus.Live : ListingStatus.InReview,
+      formerPrice: formerPriceKobo,
+      discountPercent: discountPercent,
+      // Owner/admin listings bypass the listing fee along with the review.
+      ...(skipReview
+        ? { listingFeeStatus: 'waived', isExpectingFee: false }
+        : {}),
     });
 
     const savedListing = await listing.save();
@@ -284,8 +309,13 @@ export class ListingsService {
     listingId: string,
     userId: string,
     updateListingDto: UpdateListingDto,
+    editorRole?: string,
   ): Promise<ListingDocument> {
     const listing = await this.verifyOwnership(listingId, userId);
+
+    // Owner (super-admin) / admin edits stay live and never bounce to review.
+    const skipReview =
+      editorRole === UserRole.SuperAdmin || editorRole === UserRole.Admin;
 
     const editableStatuses = [
       ListingStatus.Draft,
@@ -309,7 +339,8 @@ export class ListingsService {
       updateListingDto.askingPrice.amount !== listing.askingPrice?.amount;
 
     // ─── Live listing being edited → back to review ─────────
-    if (isCurrentlyLive) {
+    // (Owner/admin edits skip review and stay live.)
+    if (isCurrentlyLive && !skipReview) {
       listing.status = ListingStatus.InReview;
       listing.wasLive = true;
       listing.reviewInfo = null; // Clear old review info
@@ -323,6 +354,25 @@ export class ListingsService {
 
     // Apply the update
     Object.assign(listing, updateListingDto);
+
+    // ─── Former price / auto discount ───────────────────────
+    // Recompute the struck-through former price and discount percent from the
+    // (possibly updated) asking/selling price. Clear them when the former price
+    // is removed or no longer higher than the selling price.
+    const sellingAmount = listing.askingPrice?.amount ?? 0;
+    const nextFormer =
+      updateListingDto.formerPrice !== undefined
+        ? updateListingDto.formerPrice
+        : listing.formerPrice;
+    if (nextFormer && sellingAmount > 0 && nextFormer > sellingAmount) {
+      listing.formerPrice = nextFormer;
+      listing.discountPercent = Math.round(
+        ((nextFormer - sellingAmount) / nextFormer) * 100,
+      );
+    } else {
+      listing.set('formerPrice', undefined);
+      listing.set('discountPercent', undefined);
+    }
 
     // ─── Fee recalculation (self_listing only) ──────────────
     if (listing.type === ListingType.SelfListing && priceChanged) {

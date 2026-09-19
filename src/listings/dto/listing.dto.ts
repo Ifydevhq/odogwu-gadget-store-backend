@@ -135,6 +135,17 @@ export class CreateListingDto {
   @Type(() => PriceInfoDto)
   askingPrice: PriceInfoDto;
 
+  @ApiPropertyOptional({
+    example: 2000000,
+    description:
+      'Optional former/original price in kobo. When higher than the asking ' +
+      '(selling) price it is struck through on the marketplace and the ' +
+      'discount percent is auto-calculated.',
+  })
+  @IsNumber()
+  @IsOptional()
+  formerPrice?: number;
+
   @ApiProperty({
     type: [MediaItemDto],
     description: 'At least 1 image required, max 10',
