@@ -11,9 +11,7 @@ export declare class ChatController {
         _id: import("mongoose").Types.ObjectId;
     }>;
     getConversations(user: JwtPayload, dto: PaginationDto): Promise<{
-        data: (import("mongoose").FlattenMaps<import("./schemas/conversation.schema").ConversationDocument> & {
-            _id: import("mongoose").Types.ObjectId;
-        })[];
+        data: any[];
         pagination: {
             page: number;
             perPage: number;
@@ -21,9 +19,7 @@ export declare class ChatController {
             totalPages: number;
         };
     }>;
-    getConversation(user: JwtPayload, id: string): Promise<import("mongoose").Document<unknown, {}, import("./schemas/conversation.schema").ConversationDocument> & import("./schemas/conversation.schema").Conversation & import("mongoose").Document<any, any, any> & {
-        _id: import("mongoose").Types.ObjectId;
-    }>;
+    getConversation(user: JwtPayload, id: string): Promise<any>;
     sendMessage(user: JwtPayload, conversationId: string, dto: SendMessageDto): Promise<import("mongoose").Document<unknown, {}, import("./schemas/message.schema").MessageDocument> & import("./schemas/message.schema").Message & import("mongoose").Document<any, any, any> & {
         _id: import("mongoose").Types.ObjectId;
     }>;

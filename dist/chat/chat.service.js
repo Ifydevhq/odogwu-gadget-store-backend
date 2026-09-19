@@ -62,6 +62,67 @@ let ChatService = ChatService_1 = class ChatService {
             type: 'user',
         };
     }
+    peerDetails(conv, otherId) {
+        const pd = conv?.participantDetails;
+        if (!pd || !otherId)
+            return undefined;
+        if (pd instanceof Map)
+            return pd.get(otherId);
+        if (typeof pd.get === 'function')
+            return pd.get(otherId);
+        return pd[otherId];
+    }
+    buildPeer(conv, userId) {
+        const parts = conv?.participants || [];
+        const other = parts.find((p) => {
+            const pid = (p && p._id ? p._id : p)?.toString();
+            return pid && pid !== userId;
+        });
+        if (!other)
+            return null;
+        const populated = other && other._id ? other : null;
+        const otherId = (populated ? populated._id : other).toString();
+        const details = this.peerDetails(conv, otherId);
+        const personName = populated
+            ? `${populated.firstName || ''} ${populated.lastName || ''}`.trim()
+            : '';
+        const type = (details && details.type) || 'user';
+        let name = '';
+        let avatar;
+        if (type === 'store' || type === 'creator') {
+            name =
+                (details && details.displayName) ||
+                    personName ||
+                    (populated && (populated.businessName || populated.username)) ||
+                    '';
+            avatar =
+                (details && details.avatar) ||
+                    (populated && (populated.profileImageUrl || populated.avatar));
+        }
+        else {
+            name =
+                personName ||
+                    (populated && (populated.businessName || populated.username)) ||
+                    '';
+            avatar =
+                (populated && (populated.avatar || populated.profileImageUrl)) ||
+                    (details && details.avatar);
+        }
+        if (!name) {
+            const email = populated && populated.email;
+            name = email
+                ? `Customer - ${String(email).split('@')[0].slice(0, 4)}`
+                : 'Customer';
+        }
+        return {
+            id: otherId,
+            name,
+            avatar: avatar || null,
+            type,
+            email: (populated && populated.email) || undefined,
+            isOnline: false,
+        };
+    }
     async createOrGetConversation(userId, dto) {
         const participantId = dto.participantId;
         if (userId === participantId) {
@@ -76,7 +137,7 @@ let ChatService = ChatService_1 = class ChatService {
             contextType,
             isDeleted: { $ne: true },
         })
-            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
             .exec();
         if (conversation) {
             if (dto.productContext) {
@@ -96,7 +157,7 @@ let ChatService = ChatService_1 = class ChatService {
                 });
                 conversation = await this.conversationModel
                     .findById(conversation._id)
-                    .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+                    .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
                     .exec();
             }
             if (dto.initialMessage && !dto.productContext) {
@@ -106,7 +167,7 @@ let ChatService = ChatService_1 = class ChatService {
                 });
                 conversation = await this.conversationModel
                     .findById(conversation._id)
-                    .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+                    .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
                     .exec();
             }
             return conversation;
@@ -152,7 +213,7 @@ let ChatService = ChatService_1 = class ChatService {
         }
         return this.conversationModel
             .findById(newConversation._id)
-            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
             .exec();
     }
     async getConversations(userId, page = 1, perPage = 20) {
@@ -165,7 +226,7 @@ let ChatService = ChatService_1 = class ChatService {
         const [conversations, total] = await Promise.all([
             this.conversationModel
                 .find(filter)
-                .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+                .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
                 .sort({ updatedAt: -1 })
                 .skip((page - 1) * perPage)
                 .limit(perPage)
@@ -173,22 +234,28 @@ let ChatService = ChatService_1 = class ChatService {
                 .exec(),
             this.conversationModel.countDocuments(filter).exec(),
         ]);
+        const data = conversations.map((c) => ({
+            ...c,
+            peer: this.buildPeer(c, userId),
+        }));
         return {
-            data: conversations,
+            data,
             pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
         };
     }
     async getConversation(conversationId, userId) {
         const conversation = await this.conversationModel
             .findById(conversationId)
-            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
             .exec();
         if (!conversation)
             throw new common_1.NotFoundException('Conversation not found');
         const isParticipant = conversation.participants.some((p) => p._id?.toString() === userId || p.toString() === userId);
         if (!isParticipant)
             throw new common_1.ForbiddenException('Not a participant');
-        return conversation;
+        const obj = conversation.toObject();
+        obj.peer = this.buildPeer(obj, userId);
+        return obj;
     }
     async sendMessage(conversationId, senderId, dto) {
         const conversation = await this.conversationModel.findById(conversationId).exec();
@@ -335,7 +402,7 @@ let ChatService = ChatService_1 = class ChatService {
             participants: userObjId,
             isDeleted: { $ne: true },
         })
-            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+            .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
             .sort({ updatedAt: -1 })
             .limit(20)
             .lean()

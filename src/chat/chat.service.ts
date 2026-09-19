@@ -87,6 +87,74 @@ export class ChatService {
     };
   }
 
+  // Read a participant's denormalized display info regardless of whether the
+  // conversation is a lean object (plain map) or a hydrated document (Map).
+  private peerDetails(conv: any, otherId?: string): any {
+    const pd = conv?.participantDetails;
+    if (!pd || !otherId) return undefined;
+    if (pd instanceof Map) return pd.get(otherId);
+    if (typeof pd.get === 'function') return pd.get(otherId);
+    return pd[otherId];
+  }
+
+  // Compute the "other side" of a conversation relative to the requesting user,
+  // resolving a good display name/avatar. This is what the clients render, so
+  // the store side shows the store (name + logo) and the customer side shows the
+  // customer's name — or, when they never set one, `Customer - <email prefix>`.
+  private buildPeer(conv: any, userId: string) {
+    const parts: any[] = conv?.participants || [];
+    const other = parts.find((p: any) => {
+      const pid = (p && p._id ? p._id : p)?.toString();
+      return pid && pid !== userId;
+    });
+    if (!other) return null;
+
+    const populated = other && other._id ? other : null;
+    const otherId = (populated ? populated._id : other).toString();
+    const details = this.peerDetails(conv, otherId);
+    const personName = populated
+      ? `${populated.firstName || ''} ${populated.lastName || ''}`.trim()
+      : '';
+    const type: string = (details && details.type) || 'user';
+
+    let name = '';
+    let avatar: string | undefined;
+    if (type === 'store' || type === 'creator') {
+      name =
+        (details && details.displayName) ||
+        personName ||
+        (populated && (populated.businessName || populated.username)) ||
+        '';
+      avatar =
+        (details && details.avatar) ||
+        (populated && (populated.profileImageUrl || populated.avatar));
+    } else {
+      name =
+        personName ||
+        (populated && (populated.businessName || populated.username)) ||
+        '';
+      avatar =
+        (populated && (populated.avatar || populated.profileImageUrl)) ||
+        (details && details.avatar);
+    }
+
+    if (!name) {
+      const email: string | undefined = populated && populated.email;
+      name = email
+        ? `Customer - ${String(email).split('@')[0].slice(0, 4)}`
+        : 'Customer';
+    }
+
+    return {
+      id: otherId,
+      name,
+      avatar: avatar || null,
+      type,
+      email: (populated && populated.email) || undefined,
+      isOnline: false,
+    };
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // CONVERSATIONS
   // ═══════════════════════════════════════════════════════════════════
@@ -110,7 +178,7 @@ export class ChatService {
         contextType,
         isDeleted: { $ne: true },
       })
-      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
       .exec();
 
     if (conversation) {
@@ -133,7 +201,7 @@ export class ChatService {
         // Re-fetch to get updated lastMessage
         conversation = await this.conversationModel
           .findById(conversation._id)
-          .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+          .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
           .exec();
       }
 
@@ -146,7 +214,7 @@ export class ChatService {
         // Re-fetch to get updated lastMessage
         conversation = await this.conversationModel
           .findById(conversation._id)
-          .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+          .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
           .exec();
       }
 
@@ -202,7 +270,7 @@ export class ChatService {
 
     return this.conversationModel
       .findById(newConversation._id)
-      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
       .exec();
   }
 
@@ -217,7 +285,7 @@ export class ChatService {
     const [conversations, total] = await Promise.all([
       this.conversationModel
         .find(filter)
-        .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+        .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
         .sort({ updatedAt: -1 })
         .skip((page - 1) * perPage)
         .limit(perPage)
@@ -226,8 +294,13 @@ export class ChatService {
       this.conversationModel.countDocuments(filter).exec(),
     ]);
 
+    const data = conversations.map((c: any) => ({
+      ...c,
+      peer: this.buildPeer(c, userId),
+    }));
+
     return {
-      data: conversations,
+      data,
       pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
     };
   }
@@ -235,7 +308,7 @@ export class ChatService {
   async getConversation(conversationId: string, userId: string) {
     const conversation = await this.conversationModel
       .findById(conversationId)
-      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
       .exec();
 
     if (!conversation) throw new NotFoundException('Conversation not found');
@@ -245,7 +318,9 @@ export class ChatService {
     );
     if (!isParticipant) throw new ForbiddenException('Not a participant');
 
-    return conversation;
+    const obj: any = conversation.toObject();
+    obj.peer = this.buildPeer(obj, userId);
+    return obj;
   }
 
   // ═══════════════════════════════════════════════════════════════════
@@ -462,7 +537,7 @@ export class ChatService {
         participants: userObjId,
         isDeleted: { $ne: true },
       })
-      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName')
+      .populate('participants', 'firstName lastName avatar profileImageUrl username businessName email')
       .sort({ updatedAt: -1 })
       .limit(20)
       .lean()
