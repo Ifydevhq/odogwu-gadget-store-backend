@@ -39,6 +39,8 @@ export declare class ChatService {
             totalPages: number;
         };
     }>;
+    editMessage(messageId: string, userId: string, content: string): Promise<MessageDocument>;
+    deleteMessage(messageId: string, userId: string): Promise<MessageDocument>;
     markAsRead(conversationId: string, userId: string): Promise<{
         success: boolean;
     }>;

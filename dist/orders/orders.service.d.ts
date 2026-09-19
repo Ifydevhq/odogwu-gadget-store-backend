@@ -17,6 +17,7 @@ export declare class OrdersService {
     constructor(orderModel: Model<OrderDocument>, listingsService: ListingsService, storesService: StoresService, creatorsService: CreatorsService, notificationsService: NotificationsService, alertsService: AlertsService);
     private generateOrderNumber;
     private calculateRevenueSplit;
+    private notifyOrderCreated;
     create(buyerId: string, createOrderDto: CreateOrderDto): Promise<OrderDocument>;
     createCartOrder(buyerId: string, items: Array<{
         listingId: string;
@@ -30,7 +31,7 @@ export declare class OrdersService {
         type: string;
         image: string | null;
         commissionRate: number;
-    }>, shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number): Promise<OrderDocument>;
+    }>, shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number, notifyBuyer?: boolean): Promise<OrderDocument>;
     createPayOnDeliveryOrder(buyerId: string, items: Parameters<OrdersService['createCartOrder']>[1], shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number): Promise<OrderDocument>;
     private dispatchPaymentReceipt;
     private dispatchPayOnDeliveryNotifications;

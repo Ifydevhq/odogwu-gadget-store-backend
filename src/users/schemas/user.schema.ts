@@ -48,6 +48,16 @@ class Mobile {
   isoCode: string;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Embedded sub-document for a registered push-notification device
+// token (FCM). One user may have several (phone, tablet, web).
+// ─────────────────────────────────────────────────────────────
+class PushToken {
+  token: string;
+  platform: string;
+  updatedAt: Date;
+}
+
 @Schema({
   timestamps: true, // Auto-adds createdAt and updatedAt fields
   toJSON: {
@@ -176,6 +186,21 @@ export class User extends BaseSchema {
     orderUpdates: boolean;
     promotions: boolean;
   };
+
+  // ─── Push Notification Device Tokens ─────────────────────
+  // FCM registration tokens for this user's devices. Deduped by token.
+
+  @Prop({
+    type: [
+      {
+        token: { type: String, required: true },
+        platform: { type: String, default: 'web' },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
+    default: [],
+  })
+  pushTokens: PushToken[];
 
   // ─── Password Reset ──────────────────────────────────────
 

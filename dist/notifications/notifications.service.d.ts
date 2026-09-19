@@ -40,6 +40,19 @@ export declare class NotificationsService {
     }): Promise<void>;
     private send;
     sendRawEmail(to: string, subject: string, html: string): Promise<void>;
+    sendBroadcastEmail(recipients: {
+        email: string;
+        name?: string;
+    }[], content: {
+        subject: string;
+        heading: string;
+        body: string;
+        ctaText?: string;
+        ctaUrl?: string;
+        imageUrl?: string;
+    }): Promise<{
+        sent: number;
+    }>;
     sendVerificationOtp(email: string, firstName: string, otp: string): Promise<void>;
     sendWelcome(email: string, firstName: string): Promise<void>;
     sendPasswordReset(email: string, firstName: string, resetToken: string): Promise<void>;

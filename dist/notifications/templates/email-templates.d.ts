@@ -119,3 +119,14 @@ export declare function listingRejectedTemplate(brand: EmailBrand, data: {
     subject: string;
     html: string;
 };
+export declare function broadcastTemplate(brand: EmailBrand, data: {
+    subject: string;
+    heading: string;
+    body: string;
+    ctaText?: string;
+    ctaUrl?: string;
+    imageUrl?: string;
+}): {
+    subject: string;
+    html: string;
+};

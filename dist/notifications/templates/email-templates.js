@@ -10,6 +10,7 @@ exports.newOrderAlertTemplate = newOrderAlertTemplate;
 exports.orderStatusUpdateTemplate = orderStatusUpdateTemplate;
 exports.listingApprovedTemplate = listingApprovedTemplate;
 exports.listingRejectedTemplate = listingRejectedTemplate;
+exports.broadcastTemplate = broadcastTemplate;
 const COLORS = {
     blue: '#0068FD',
     blueDark: '#0052CC',
@@ -539,6 +540,30 @@ function listingRejectedTemplate(brand, data) {
       <p style="text-align: center; margin: 24px 0 0 0;">
         <a href="${brand.frontendUrl}" style="${styles.button}">Edit Listing</a>
       </p>
+    `),
+    };
+}
+function broadcastTemplate(brand, data) {
+    const imageHtml = data.imageUrl
+        ? `<img src="${data.imageUrl}" alt="${data.heading}" style="display: block; width: 100%; max-width: 520px; height: auto; border: 0; border-radius: 12px; margin: 0 0 24px 0;" />`
+        : '';
+    const bodyHtml = data.body
+        .split(/\n{2,}/)
+        .map((para) => `<p style="${styles.p}">${para.replace(/\n/g, '<br>')}</p>`)
+        .join('');
+    const ctaHtml = data.ctaText && data.ctaUrl
+        ? `
+      <p style="text-align: center; margin: 28px 0 0 0;">
+        <a href="${data.ctaUrl}" style="${styles.button}">${data.ctaText}</a>
+      </p>`
+        : '';
+    return {
+        subject: data.subject,
+        html: baseLayout(brand, `
+      ${imageHtml}
+      <h2 style="${styles.h2}">${data.heading}</h2>
+      ${bodyHtml}
+      ${ctaHtml}
     `),
     };
 }

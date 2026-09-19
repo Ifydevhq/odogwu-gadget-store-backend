@@ -49,6 +49,8 @@ import { DeliveryZonesModule } from './delivery-zones/delivery-zones.module';
 import { DisputesModule } from './disputes/disputes.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { ChatModule } from './chat/chat.module';
+import { PushModule } from './push/push.module';
+import { AnnouncementsModule } from './announcements/announcements.module';
 
 @Module({
   imports: [
@@ -117,6 +119,8 @@ import { ChatModule } from './chat/chat.module';
     DisputesModule,
     AlertsModule,
     ChatModule,
+    PushModule,
+    AnnouncementsModule,
   ],
   controllers: [AppController],
 })

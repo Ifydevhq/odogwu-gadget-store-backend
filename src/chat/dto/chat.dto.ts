@@ -104,6 +104,19 @@ export class SendMessageDto {
   @ApiPropertyOptional({ description: 'Additional metadata for the message' })
   @IsOptional()
   metadata?: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'ID of the message being replied to' })
+  @IsString()
+  @IsOptional()
+  replyTo?: string;
+}
+
+// ─── Edit Message ──────────────────────────────────────────────────
+
+export class EditMessageDto {
+  @ApiProperty()
+  @IsString()
+  content: string;
 }
 
 // ─── Query Messages ────────────────────────────────────────────────

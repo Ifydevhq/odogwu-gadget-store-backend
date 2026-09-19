@@ -155,6 +155,69 @@ export class OrdersService {
    * The order stays PENDING until Paystack confirms payment,
    * at which point confirmPayment() updates it to CONFIRMED.
    */
+  /**
+   * Fires the in-app alerts that EVERY order-creation path must send:
+   *   - NewOrderReceived → each distinct seller/store owner in the order
+   *     (order.sellerId if set, plus each distinct items[].sellerId)
+   *   - OrderPlaced → the buyer (unless notifyBuyer is false)
+   *
+   * AlertsService swallows its own errors, and each call is fire-and-forget,
+   * so this can never break order creation.
+   */
+  private async notifyOrderCreated(
+    order: OrderDocument,
+    opts: { notifyBuyer?: boolean } = {},
+  ): Promise<void> {
+    const { notifyBuyer = true } = opts;
+    const buyerId = order.buyerId?.toString();
+
+    // Distinct sellers: order-level sellerId + each item-level sellerId
+    const sellerIds = new Set<string>();
+    const orderSeller =
+      (order as any).sellerId?._id?.toString() ||
+      (order as any).sellerId?.toString();
+    if (orderSeller) sellerIds.add(orderSeller);
+    for (const item of order.items || []) {
+      const sid = (item as any).sellerId?.toString();
+      if (sid) sellerIds.add(sid);
+    }
+    // A buyer is never notified as their own seller (self-purchase guard).
+    if (buyerId) sellerIds.delete(buyerId);
+
+    const itemsSummary =
+      order.items.length === 1
+        ? order.items[0].itemName
+        : `${order.items.length} items`;
+
+    for (const sellerId of sellerIds) {
+      this.alertsService
+        .createAlert({
+          userId: sellerId,
+          type: AlertType.NewOrderReceived,
+          title: 'New Order Received! 🎉',
+          message: `You received a new order #${order.orderNumber} for ${itemsSummary}. Check your orders for details.`,
+          entityId: order._id.toString(),
+          entityType: 'order',
+          metadata: { orderNumber: order.orderNumber },
+        })
+        .catch(() => {});
+    }
+
+    if (notifyBuyer && buyerId) {
+      this.alertsService
+        .createAlert({
+          userId: buyerId,
+          type: AlertType.OrderPlaced,
+          title: 'Order placed 🛍️',
+          message: `We have received your order #${order.orderNumber} for ${itemsSummary}.`,
+          entityId: order._id.toString(),
+          entityType: 'order',
+          metadata: { orderNumber: order.orderNumber },
+        })
+        .catch(() => {});
+    }
+  }
+
   async create(
     buyerId: string,
     createOrderDto: CreateOrderDto,
@@ -235,7 +298,12 @@ export class OrdersService {
         split.sellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
     });
 
-    return order.save();
+    const saved = await order.save();
+
+    // In-app alerts: notify the store owner(s) + buyer that an order exists.
+    await this.notifyOrderCreated(saved);
+
+    return saved;
   }
 
   // ─── Create Order from Cart Checkout ────────────────────
@@ -269,6 +337,7 @@ export class OrdersService {
     buyerNote?: string,
     receiptEmail?: string,
     deliveryFee: number = 0,
+    notifyBuyer: boolean = true,
   ): Promise<OrderDocument> {
     const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
 
@@ -342,7 +411,15 @@ export class OrdersService {
         totalSellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
     });
 
-    return order.save();
+    const saved = await order.save();
+
+    // In-app alerts: notify each distinct store owner + (optionally) the buyer.
+    // COD passes notifyBuyer=false — it sends its own COD-specific "order
+    // placed" alert from dispatchPayOnDeliveryNotifications, so we skip the
+    // buyer alert here to avoid a duplicate.
+    await this.notifyOrderCreated(saved, { notifyBuyer });
+
+    return saved;
   }
 
   // ─── Pay on Delivery Order ───────────────────────────────
@@ -368,6 +445,7 @@ export class OrdersService {
       buyerNote,
       receiptEmail,
       deliveryFee,
+      false, // buyer OrderPlaced alert is sent below (COD-specific copy)
     );
 
     // Stays PENDING, not Confirmed. Nothing has been paid and nobody has
@@ -736,25 +814,9 @@ export class OrdersService {
       })
       .catch(() => {});
 
-    // Alert each seller: new order received
-    const alertedSellers = new Set<string>();
-    for (const item of order.items) {
-      const sellerId = (item as any).sellerId?.toString();
-      if (sellerId && !alertedSellers.has(sellerId)) {
-        alertedSellers.add(sellerId);
-        this.alertsService
-          .createAlert({
-            userId: sellerId,
-            type: AlertType.NewOrderReceived,
-            title: 'New Order Received! 🎉',
-            message: `You received a new order #${order.orderNumber}. Check your orders for details.`,
-            entityId: order._id,
-            entityType: 'order',
-            metadata: { orderNumber: order.orderNumber },
-          })
-          .catch(() => {});
-      }
-    }
+    // NOTE: sellers are alerted (NewOrderReceived) at order-creation time via
+    // notifyOrderCreated(), so we intentionally do NOT re-alert them here to
+    // avoid duplicate "new order" notifications.
 
     return updatedOrder;
   }

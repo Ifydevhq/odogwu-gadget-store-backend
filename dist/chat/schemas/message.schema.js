@@ -56,6 +56,25 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Boolean, default: false }),
     __metadata("design:type", Boolean)
 ], Message.prototype, "isDeleted", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Boolean, default: false }),
+    __metadata("design:type", Boolean)
+], Message.prototype, "edited", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, default: null }),
+    __metadata("design:type", Date)
+], Message.prototype, "editedAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            messageId: { type: mongoose_2.Types.ObjectId, ref: 'Message' },
+            content: { type: String },
+            senderId: { type: mongoose_2.Types.ObjectId, ref: 'User' },
+        },
+        default: null,
+    }),
+    __metadata("design:type", Object)
+], Message.prototype, "replyTo", void 0);
 exports.Message = Message = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], Message);

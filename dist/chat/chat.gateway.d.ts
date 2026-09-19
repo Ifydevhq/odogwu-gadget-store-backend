@@ -17,6 +17,7 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         type?: string;
         productCard?: any;
         attachments?: string[];
+        replyTo?: string;
     }): Promise<{
         success: boolean;
         message: import("./schemas/message.schema").Message & import("mongoose").Document<any, any, any> & {
@@ -27,6 +28,27 @@ export declare class ChatGateway implements OnGatewayConnection, OnGatewayDiscon
         success: boolean;
         error: any;
         message?: undefined;
+    }>;
+    handleEditMessage(client: Socket, data: {
+        messageId: string;
+        content: string;
+    }): Promise<{
+        success: boolean;
+        message: any;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
+        message?: undefined;
+    }>;
+    handleDeleteMessage(client: Socket, data: {
+        messageId: string;
+    }): Promise<{
+        success: boolean;
+        error?: undefined;
+    } | {
+        success: boolean;
+        error: any;
     }>;
     handleJoinConversation(client: Socket, data: {
         conversationId: string;

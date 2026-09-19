@@ -24,6 +24,10 @@ export declare class SendMessageDto {
     productCard?: ProductCardDto;
     attachments?: string[];
     metadata?: Record<string, any>;
+    replyTo?: string;
+}
+export declare class EditMessageDto {
+    content: string;
 }
 export declare class QueryMessagesDto extends PaginationDto {
     before?: string;

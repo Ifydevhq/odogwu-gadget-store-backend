@@ -284,4 +284,61 @@ export class UsersService {
 
     return user;
   }
+
+  // ═══════════════════════════════════════════════════════════
+  // PUSH NOTIFICATION DEVICE TOKENS
+  // ═══════════════════════════════════════════════════════════
+
+  /**
+   * Registers (or refreshes) an FCM device token for the user. Deduped by
+   * token: if it already exists, the platform + updatedAt are refreshed.
+   */
+  async addPushToken(
+    userId: string,
+    token: string,
+    platform: string,
+  ): Promise<UserDocument> {
+    // Pull any existing copy of this token, then push the fresh entry.
+    await this.userModel
+      .updateOne(
+        { _id: userId },
+        { $pull: { pushTokens: { token } } },
+      )
+      .exec();
+
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $push: {
+            pushTokens: { token, platform, updatedAt: new Date() },
+          },
+        },
+        { new: true, runValidators: true },
+      )
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  /** Removes a device token from the user (e.g. on logout). */
+  async removePushToken(userId: string, token: string): Promise<UserDocument> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        { $pull: { pushTokens: { token } } },
+        { new: true },
+      )
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
 }

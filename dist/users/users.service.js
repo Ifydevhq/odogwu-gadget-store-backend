@@ -147,6 +147,31 @@ let UsersService = class UsersService {
         }
         return user;
     }
+    async addPushToken(userId, token, platform) {
+        await this.userModel
+            .updateOne({ _id: userId }, { $pull: { pushTokens: { token } } })
+            .exec();
+        const user = await this.userModel
+            .findByIdAndUpdate(userId, {
+            $push: {
+                pushTokens: { token, platform, updatedAt: new Date() },
+            },
+        }, { new: true, runValidators: true })
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async removePushToken(userId, token) {
+        const user = await this.userModel
+            .findByIdAndUpdate(userId, { $pull: { pushTokens: { token } } }, { new: true })
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

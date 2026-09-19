@@ -259,6 +259,22 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
     async sendRawEmail(to, subject, html) {
         await this.send(to, subject, html);
     }
+    async sendBroadcastEmail(recipients, content) {
+        const valid = (recipients || []).filter((r) => r && r.email);
+        if (valid.length === 0)
+            return { sent: 0 };
+        const { subject, html } = (0, email_templates_1.broadcastTemplate)(this.brand, content);
+        const chunkSize = 50;
+        let sent = 0;
+        for (let i = 0; i < valid.length; i += chunkSize) {
+            const chunk = valid.slice(i, i + chunkSize);
+            await Promise.all(chunk.map(async (r) => {
+                await this.send(r.email, subject, html);
+                sent += 1;
+            }));
+        }
+        return { sent };
+    }
     async sendVerificationOtp(email, firstName, otp) {
         const { subject, html } = (0, email_templates_1.verificationOtpTemplate)(this.brand, {
             firstName,
