@@ -61,6 +61,7 @@ import {
   WalletTxnType,
 } from '../wallet/schemas/wallet-transaction.schema';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
+import { ReferralsService } from '../referrals/referrals.service';
 
 @Injectable()
 export class OrdersService {
@@ -73,6 +74,9 @@ export class OrdersService {
     private alertsService: AlertsService,
     private walletService: WalletService,
     private platformSettingsService: PlatformSettingsService,
+    // @Global ReferralsModule — injected directly (no OrdersModule import of
+    // ReferralsModule) to avoid a circular module dependency.
+    private referralsService: ReferralsService,
   ) {}
 
   private readonly logger = new Logger(OrdersService.name);
@@ -1431,6 +1435,23 @@ export class OrdersService {
           ? `Order ${savedOrder.orderNumber} refunded`
           : `Order ${savedOrder.orderNumber} cancelled`,
       );
+    }
+
+    // ─── Referral: check the buyer's cumulative spend on completion ─
+    // Fire-and-forget + fully self-contained try-catch inside the service, so
+    // it can never break order completion. Rewards the referrer only if this
+    // buyer was referred, is phone-verified and crosses the spend threshold.
+    if (status === OrderStatus.Completed) {
+      this.referralsService
+        .recordCompletedOrder(
+          savedOrder.buyerId.toString(),
+          savedOrder.totalAmount,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `recordCompletedOrder failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
     }
 
     // Notify buyer about status change (fire and forget)

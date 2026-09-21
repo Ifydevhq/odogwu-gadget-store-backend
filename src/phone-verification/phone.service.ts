@@ -38,6 +38,7 @@ import {
   SmsVerificationProvider,
 } from './sms-verification.provider';
 import { normalizeNigerianPhone } from './phone.util';
+import { ReferralsService } from '../referrals/referrals.service';
 
 @Injectable()
 export class PhoneService {
@@ -51,6 +52,8 @@ export class PhoneService {
     private readonly usersService: UsersService,
     private readonly platformSettingsService: PlatformSettingsService,
     private readonly walletService: WalletService,
+    // @Global ReferralsModule — injected directly to avoid a module cycle.
+    private readonly referralsService: ReferralsService,
   ) {}
 
   /**
@@ -117,6 +120,17 @@ export class PhoneService {
       phoneE164,
       registry,
     );
+
+    // (e) Activate any pending referral for this user now that their phone is
+    // verified. Enforces "one referral redemption per phone" (anti-farm) and
+    // never breaks the verify flow.
+    try {
+      await this.referralsService.activateOnPhoneVerified(userId, phoneE164);
+    } catch (err) {
+      this.logger.error(
+        `activateOnPhoneVerified failed for ${phoneE164}: ${err?.message}`,
+      );
+    }
 
     return { verified: true, welcomeGranted };
   }

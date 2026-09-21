@@ -53,6 +53,7 @@ import { PushModule } from './push/push.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { WalletModule } from './wallet/wallet.module';
 import { PhoneVerificationModule } from './phone-verification/phone-verification.module';
+import { ReferralsModule } from './referrals/referrals.module';
 
 @Module({
   imports: [
@@ -125,6 +126,7 @@ import { PhoneVerificationModule } from './phone-verification/phone-verification
     AnnouncementsModule,
     WalletModule,
     PhoneVerificationModule,
+    ReferralsModule,
   ],
   controllers: [AppController],
 })

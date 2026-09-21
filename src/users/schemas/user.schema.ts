@@ -27,7 +27,7 @@
  */
 
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Exclude } from 'class-transformer';
 import { AuthProvider, UserRole } from '@config/contants';
 import { BaseSchema } from '@common/schemas/base-schema';
@@ -150,6 +150,19 @@ export class User extends BaseSchema {
   @Prop({ type: Date, default: null })
   phoneVerifiedAt?: Date;
 
+  // ─── Referrals ───────────────────────────────────────────
+  // `referralCode` is this user's OWN short code that they share. It is
+  // generated for every new user and lazily backfilled on read for legacy
+  // accounts (see UsersService.findById). `referredBy` points at the user
+  // whose code was used when THIS user signed up. Reward eligibility is gated
+  // on phone verification (see the referrals module + anti-farm registry).
+
+  @Prop({ type: String, default: null, unique: true, sparse: true, index: true })
+  referralCode?: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
+  referredBy?: Types.ObjectId;
+
   // ─── Personal Details ────────────────────────────────────
 
   @Prop({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] })
@@ -241,3 +254,5 @@ UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 // Fast lookups for the "one verified account per phone" enforcement.
 UserSchema.index({ phoneE164: 1 });
+// Referral code lookups (unique, but sparse so legacy null codes don't clash).
+UserSchema.index({ referralCode: 1 }, { unique: true, sparse: true });

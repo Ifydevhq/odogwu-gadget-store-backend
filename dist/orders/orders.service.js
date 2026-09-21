@@ -28,8 +28,9 @@ const contants_2 = require("../config/contants");
 const wallet_service_1 = require("../wallet/wallet.service");
 const wallet_transaction_schema_1 = require("../wallet/schemas/wallet-transaction.schema");
 const platform_settings_service_1 = require("../platform-settings/platform-settings.service");
+const referrals_service_1 = require("../referrals/referrals.service");
 let OrdersService = OrdersService_1 = class OrdersService {
-    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService, walletService, platformSettingsService) {
+    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService, walletService, platformSettingsService, referralsService) {
         this.orderModel = orderModel;
         this.listingsService = listingsService;
         this.storesService = storesService;
@@ -38,6 +39,7 @@ let OrdersService = OrdersService_1 = class OrdersService {
         this.alertsService = alertsService;
         this.walletService = walletService;
         this.platformSettingsService = platformSettingsService;
+        this.referralsService = referralsService;
         this.logger = new common_1.Logger(OrdersService_1.name);
     }
     async computeCreditPlan(buyerId, payableKobo, capKobo) {
@@ -834,6 +836,11 @@ let OrdersService = OrdersService_1 = class OrdersService {
                 ? `Order ${savedOrder.orderNumber} refunded`
                 : `Order ${savedOrder.orderNumber} cancelled`);
         }
+        if (status === contants_1.OrderStatus.Completed) {
+            this.referralsService
+                .recordCompletedOrder(savedOrder.buyerId.toString(), savedOrder.totalAmount)
+                .catch((err) => this.logger.error(`recordCompletedOrder failed for ${savedOrder.orderNumber}: ${err?.message}`));
+        }
         const populatedOrder = await this.orderModel
             .findById(order._id)
             .populate('buyerId', 'firstName email')
@@ -1094,6 +1101,7 @@ exports.OrdersService = OrdersService = OrdersService_1 = __decorate([
         notifications_service_1.NotificationsService,
         alerts_service_1.AlertsService,
         wallet_service_1.WalletService,
-        platform_settings_service_1.PlatformSettingsService])
+        platform_settings_service_1.PlatformSettingsService,
+        referrals_service_1.ReferralsService])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

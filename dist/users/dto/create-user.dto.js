@@ -115,6 +115,11 @@ __decorate([
     __metadata("design:type", String)
 ], CreateUserDto.prototype, "bio", void 0);
 __decorate([
+    (0, class_validator_1.IsMongoId)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateUserDto.prototype, "referredBy", void 0);
+__decorate([
     (0, class_validator_1.IsBoolean)(),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)

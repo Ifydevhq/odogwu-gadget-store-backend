@@ -24,13 +24,15 @@ const wallet_transaction_schema_1 = require("../wallet/schemas/wallet-transactio
 const phone_registry_schema_1 = require("./schemas/phone-registry.schema");
 const sms_verification_provider_1 = require("./sms-verification.provider");
 const phone_util_1 = require("./phone.util");
+const referrals_service_1 = require("../referrals/referrals.service");
 let PhoneService = PhoneService_1 = class PhoneService {
-    constructor(smsProvider, phoneRegistryModel, usersService, platformSettingsService, walletService) {
+    constructor(smsProvider, phoneRegistryModel, usersService, platformSettingsService, walletService, referralsService) {
         this.smsProvider = smsProvider;
         this.phoneRegistryModel = phoneRegistryModel;
         this.usersService = usersService;
         this.platformSettingsService = platformSettingsService;
         this.walletService = walletService;
+        this.referralsService = referralsService;
         this.logger = new common_1.Logger(PhoneService_1.name);
     }
     async requestOtp(userId, rawPhoneNumber) {
@@ -57,6 +59,12 @@ let PhoneService = PhoneService_1 = class PhoneService {
             .findOneAndUpdate({ phoneE164 }, { $setOnInsert: { phoneE164, firstUserId: new mongoose_2.Types.ObjectId(userId) } }, { upsert: true, new: true, setDefaultsOnInsert: true })
             .exec();
         const welcomeGranted = await this.maybeGrantWelcomeCredit(userId, phoneE164, registry);
+        try {
+            await this.referralsService.activateOnPhoneVerified(userId, phoneE164);
+        }
+        catch (err) {
+            this.logger.error(`activateOnPhoneVerified failed for ${phoneE164}: ${err?.message}`);
+        }
         return { verified: true, welcomeGranted };
     }
     async maybeGrantWelcomeCredit(userId, phoneE164, registry) {
@@ -88,6 +96,7 @@ exports.PhoneService = PhoneService = PhoneService_1 = __decorate([
     __metadata("design:paramtypes", [Object, mongoose_2.Model,
         users_service_1.UsersService,
         platform_settings_service_1.PlatformSettingsService,
-        wallet_service_1.WalletService])
+        wallet_service_1.WalletService,
+        referrals_service_1.ReferralsService])
 ], PhoneService);
 //# sourceMappingURL=phone.service.js.map

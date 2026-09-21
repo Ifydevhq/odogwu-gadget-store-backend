@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserSchema = exports.User = void 0;
 const mongoose_1 = require("@nestjs/mongoose");
+const mongoose_2 = require("mongoose");
 const class_transformer_1 = require("class-transformer");
 const contants_1 = require("../../config/contants");
 const base_schema_1 = require("../../common/schemas/base-schema");
@@ -93,6 +94,14 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Date, default: null }),
     __metadata("design:type", Date)
 ], User.prototype, "phoneVerifiedAt", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null, unique: true, sparse: true, index: true }),
+    __metadata("design:type", String)
+], User.prototype, "referralCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, ref: 'User', default: null, index: true }),
+    __metadata("design:type", mongoose_2.Types.ObjectId)
+], User.prototype, "referredBy", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] }),
     __metadata("design:type", String)
@@ -188,4 +197,5 @@ exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
 exports.UserSchema.index({ email: 1 }, { unique: true });
 exports.UserSchema.index({ role: 1 });
 exports.UserSchema.index({ phoneE164: 1 });
+exports.UserSchema.index({ referralCode: 1 }, { unique: true, sparse: true });
 //# sourceMappingURL=user.schema.js.map

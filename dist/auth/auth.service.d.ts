@@ -4,13 +4,15 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto, LoginDto, VerifyEmailDto, ForgotPasswordDto, ResetPasswordDto } from './dto/auth.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AlertsService } from '../alerts/alerts.service';
+import { ReferralsService } from '../referrals/referrals.service';
 export declare class AuthService {
     private usersService;
     private jwtService;
     private configService;
     private notificationsService;
     private alertsService;
-    constructor(usersService: UsersService, jwtService: JwtService, configService: ConfigService, notificationsService: NotificationsService, alertsService: AlertsService);
+    private referralsService;
+    constructor(usersService: UsersService, jwtService: JwtService, configService: ConfigService, notificationsService: NotificationsService, alertsService: AlertsService, referralsService: ReferralsService);
     private generateOTP;
     private generateToken;
     private buildAuthResponse;

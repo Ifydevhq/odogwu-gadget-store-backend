@@ -8,6 +8,10 @@ export declare class UsersService {
     private userModel;
     constructor(userModel: Model<UserDocument>);
     create(createUserDto: CreateUserDto): Promise<UserDocument>;
+    private generateReferralCode;
+    generateUniqueReferralCode(): Promise<string>;
+    findByReferralCode(code: string): Promise<UserDocument | null>;
+    ensureReferralCode(user: UserDocument): Promise<UserDocument>;
     findById(id: string): Promise<UserDocument>;
     findByEmail(email: string): Promise<UserDocument | null>;
     getProfile(userId: string): Promise<UserDocument>;

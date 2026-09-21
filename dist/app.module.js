@@ -41,6 +41,7 @@ const push_module_1 = require("./push/push.module");
 const announcements_module_1 = require("./announcements/announcements.module");
 const wallet_module_1 = require("./wallet/wallet.module");
 const phone_verification_module_1 = require("./phone-verification/phone-verification.module");
+const referrals_module_1 = require("./referrals/referrals.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -92,6 +93,7 @@ exports.AppModule = AppModule = __decorate([
             announcements_module_1.AnnouncementsModule,
             wallet_module_1.WalletModule,
             phone_verification_module_1.PhoneVerificationModule,
+            referrals_module_1.ReferralsModule,
         ],
         controllers: [app_controller_1.AppController],
     })

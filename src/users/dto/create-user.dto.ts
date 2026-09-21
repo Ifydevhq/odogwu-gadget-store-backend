@@ -21,6 +21,7 @@ import {
   IsEmail,
   IsEnum,
   IsISO8601,
+  IsMongoId,
   IsOptional,
   IsString,
   MinLength,
@@ -110,6 +111,11 @@ export class CreateUserDto {
   bio?: string;
 
   // ─── Internal fields (set by auth service, not by the user) ───
+
+  // Resolved referrer's user id (from the referral code used at signup).
+  @IsMongoId()
+  @IsOptional()
+  referredBy?: string;
 
   @IsBoolean()
   @IsOptional()

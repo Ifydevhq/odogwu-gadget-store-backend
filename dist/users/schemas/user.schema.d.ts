@@ -1,4 +1,4 @@
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { AuthProvider, UserRole } from '@config/contants';
 import { BaseSchema } from '@common/schemas/base-schema';
 export type UserDocument = User & Document;
@@ -25,6 +25,8 @@ export declare class User extends BaseSchema {
     isPhoneVerified: boolean;
     phoneE164?: string;
     phoneVerifiedAt?: Date;
+    referralCode?: string;
+    referredBy?: Types.ObjectId;
     gender?: string;
     dateOfBirth?: string;
     country?: string;
@@ -44,8 +46,8 @@ export declare class User extends BaseSchema {
     passwordResetExpires?: Date;
 }
 export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, Document<unknown, any, User> & User & {
-    _id: import("mongoose").Types.ObjectId;
+    _id: Types.ObjectId;
 }, any>, {}, {}, {}, {}, import("mongoose").DefaultSchemaOptions, User, Document<unknown, {}, import("mongoose").FlatRecord<User>> & import("mongoose").FlatRecord<User> & {
-    _id: import("mongoose").Types.ObjectId;
+    _id: Types.ObjectId;
 }>;
 export {};
