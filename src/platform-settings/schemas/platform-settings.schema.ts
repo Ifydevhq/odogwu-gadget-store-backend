@@ -112,8 +112,8 @@ export class PlatformSettings {
 
   // ─── Wallet / Store-Credit Settings ────────────────────────────
 
-  /** Welcome/promo credit granted per verified phone, in kobo (0 = disabled). */
-  @Prop({ type: Number, default: 0 })
+  /** Welcome/promo credit granted per verified phone, in kobo (₦2,000). */
+  @Prop({ type: Number, default: 200000 })
   welcomeCreditAmount: number;
 
   /** Max % of an order payable from PROMO credit (default 20%). */

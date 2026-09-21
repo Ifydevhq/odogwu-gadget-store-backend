@@ -107,7 +107,7 @@ __decorate([
     __metadata("design:type", Number)
 ], PlatformSettings.prototype, "maxReturnHoursBeforeAutoComplete", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: Number, default: 0 }),
+    (0, mongoose_1.Prop)({ type: Number, default: 200000 }),
     __metadata("design:type", Number)
 ], PlatformSettings.prototype, "welcomeCreditAmount", void 0);
 __decorate([
