@@ -13,6 +13,7 @@ const platform_settings_module_1 = require("../platform-settings/platform-settin
 const withdrawals_service_1 = require("./withdrawals.service");
 const withdrawals_controller_1 = require("./withdrawals.controller");
 const withdrawal_request_schema_1 = require("./schemas/withdrawal-request.schema");
+const user_schema_1 = require("../users/schemas/user.schema");
 let WithdrawalsModule = class WithdrawalsModule {
 };
 exports.WithdrawalsModule = WithdrawalsModule;
@@ -21,6 +22,7 @@ exports.WithdrawalsModule = WithdrawalsModule = __decorate([
         imports: [
             mongoose_1.MongooseModule.forFeature([
                 { name: withdrawal_request_schema_1.WithdrawalRequest.name, schema: withdrawal_request_schema_1.WithdrawalRequestSchema },
+                { name: user_schema_1.User.name, schema: user_schema_1.UserSchema },
             ]),
             platform_settings_module_1.PlatformSettingsModule,
         ],

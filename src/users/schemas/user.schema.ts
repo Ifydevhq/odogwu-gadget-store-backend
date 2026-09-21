@@ -244,6 +244,39 @@ export class User extends BaseSchema {
 
   @Prop({ type: Date, select: false })
   passwordResetExpires?: Date;
+
+  // ─── Withdrawals: saved payout bank accounts ─────────────
+  // Verified (via Paystack) bank accounts the user saved for faster future
+  // withdrawals. accountName is the Paystack-resolved holder name.
+  @Prop({
+    type: [
+      {
+        bankName: { type: String, required: true },
+        bankCode: { type: String, required: true },
+        accountNumber: { type: String, required: true },
+        accountName: { type: String, required: true },
+      },
+    ],
+    default: [],
+  })
+  savedBankAccounts: {
+    _id?: Types.ObjectId;
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  }[];
+
+  // ─── Withdrawals: email OTP gate ─────────────────────────
+  // A 6-digit code emailed before a user can open the withdrawal view. Hashed.
+  @Prop({ select: false })
+  withdrawalOtpHash?: string;
+
+  @Prop({ type: Date, select: false })
+  withdrawalOtpExpires?: Date;
+
+  @Prop({ type: Number, select: false, default: 0 })
+  withdrawalOtpAttempts?: number;
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -21,36 +21,202 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { createHash, timingSafeEqual } from 'crypto';
 import { WalletService } from '../wallet/wallet.service';
 import {
   WalletBucket,
   WalletTxnType,
 } from '../wallet/schemas/wallet-transaction.schema';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { User, UserDocument } from '../users/schemas/user.schema';
 import {
   WithdrawalRequest,
   WithdrawalRequestDocument,
   WithdrawalStatus,
 } from './schemas/withdrawal-request.schema';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { SaveBankAccountDto } from './dto/save-bank-account.dto';
 import {
   ProcessWithdrawalDto,
   WithdrawalAction,
 } from './dto/process-withdrawal.dto';
 import { QueryWithdrawalsDto } from './dto/query-withdrawals.dto';
 
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const OTP_MAX_ATTEMPTS = 5;
+
 @Injectable()
 export class WithdrawalsService {
   private readonly logger = new Logger(WithdrawalsService.name);
+  private readonly otpPepper: string;
 
   constructor(
     @InjectModel(WithdrawalRequest.name)
     private readonly withdrawalModel: Model<WithdrawalRequestDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     private readonly walletService: WalletService,
     private readonly platformSettingsService: PlatformSettingsService,
-  ) {}
+    private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
+  ) {
+    this.otpPepper =
+      this.configService.get<string>('app.jwt.secret') || 'withdrawal-otp';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // WITHDRAWAL EMAIL OTP (gate before opening the withdrawal view)
+  // ═══════════════════════════════════════════════════════════════════
+
+  private hashOtp(code: string, userId: string): string {
+    return createHash('sha256')
+      .update(`${code}:${userId}:${this.otpPepper}`)
+      .digest('hex');
+  }
+
+  /** Generate a 6-digit code, store it hashed on the user, and email it. */
+  async sendOtp(userId: string): Promise<{ sent: true }> {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('User not found');
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    user.withdrawalOtpHash = this.hashOtp(code, String(userId));
+    user.withdrawalOtpExpires = new Date(Date.now() + OTP_TTL_MS);
+    user.withdrawalOtpAttempts = 0;
+    await user.save();
+
+    const firstName = (user.firstName || 'there').trim();
+    const html = `
+      <p>Hi ${firstName},</p>
+      <p>Use this code to authorize your withdrawal request:</p>
+      <p style="font-size:28px;font-weight:700;letter-spacing:4px;">${code}</p>
+      <p>This code expires in 10 minutes. If you didn't request a withdrawal,
+      you can safely ignore this email.</p>`;
+    await this.notificationsService.sendRawEmail(
+      user.email,
+      'Your withdrawal verification code',
+      html,
+    );
+
+    return { sent: true };
+  }
+
+  /**
+   * Validate the withdrawal OTP. Throws on any failure. When `consume` is true
+   * the code is cleared (used at submit); when false it stays valid so the same
+   * code can gate the view and then authorize the submit.
+   */
+  private async validateOtp(
+    userId: string,
+    code: string,
+    consume: boolean,
+  ): Promise<void> {
+    const user = await this.userModel
+      .findById(userId)
+      .select(
+        '+withdrawalOtpHash +withdrawalOtpExpires +withdrawalOtpAttempts',
+      )
+      .exec();
+    if (!user || !user.withdrawalOtpHash || !user.withdrawalOtpExpires) {
+      throw new BadRequestException(
+        'Please request a verification code first.',
+      );
+    }
+    if (user.withdrawalOtpExpires.getTime() < Date.now()) {
+      throw new BadRequestException(
+        'Your verification code has expired. Please request a new one.',
+      );
+    }
+    if ((user.withdrawalOtpAttempts ?? 0) >= OTP_MAX_ATTEMPTS) {
+      throw new BadRequestException(
+        'Too many attempts. Please request a new code.',
+      );
+    }
+
+    const expected = this.hashOtp(code, String(userId));
+    const match =
+      expected.length === user.withdrawalOtpHash.length &&
+      timingSafeEqual(
+        Buffer.from(expected),
+        Buffer.from(user.withdrawalOtpHash),
+      );
+    if (!match) {
+      await this.userModel
+        .updateOne({ _id: user._id }, { $inc: { withdrawalOtpAttempts: 1 } })
+        .exec();
+      throw new BadRequestException('Incorrect verification code.');
+    }
+
+    if (consume) {
+      await this.userModel
+        .updateOne(
+          { _id: user._id },
+          {
+            $unset: {
+              withdrawalOtpHash: '',
+              withdrawalOtpExpires: '',
+              withdrawalOtpAttempts: '',
+            },
+          },
+        )
+        .exec();
+    }
+  }
+
+  /** Gate check: verify the code without consuming it. Throws on failure. */
+  async verifyOtp(userId: string, code: string): Promise<{ valid: true }> {
+    await this.validateOtp(userId, code, false);
+    return { valid: true };
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // SAVED BANK ACCOUNTS
+  // ═══════════════════════════════════════════════════════════════════
+
+  async listBankAccounts(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('savedBankAccounts')
+      .lean()
+      .exec();
+    return user?.savedBankAccounts ?? [];
+  }
+
+  /** Save a (Paystack-verified) account, de-duped by bankCode+accountNumber. */
+  async saveBankAccount(userId: string, dto: SaveBankAccountDto) {
+    const user = await this.userModel.findById(userId).exec();
+    if (!user) throw new NotFoundException('User not found');
+
+    const exists = (user.savedBankAccounts ?? []).some(
+      (a) =>
+        a.bankCode === dto.bankCode &&
+        a.accountNumber === dto.accountNumber,
+    );
+    if (!exists) {
+      user.savedBankAccounts.push({
+        bankName: dto.bankName,
+        bankCode: dto.bankCode,
+        accountNumber: dto.accountNumber,
+        accountName: dto.accountName,
+      });
+      await user.save();
+    }
+    return user.savedBankAccounts;
+  }
+
+  async deleteBankAccount(userId: string, accountId: string) {
+    await this.userModel
+      .updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $pull: { savedBankAccounts: { _id: new Types.ObjectId(accountId) } } },
+      )
+      .exec();
+    return this.listBankAccounts(userId);
+  }
 
   // ═══════════════════════════════════════════════════════════════════
   // REQUEST (user)
@@ -65,6 +231,9 @@ export class WithdrawalsService {
     userId: string | Types.ObjectId,
     dto: CreateWithdrawalDto,
   ): Promise<WithdrawalRequestDocument> {
+    // Gate: the emailed 6-digit code must be valid (and is consumed here).
+    await this.validateOtp(String(userId), dto.otp, true);
+
     const settings = await this.platformSettingsService.getSettings();
     const minWithdrawal = settings.minWithdrawalAmount;
 
@@ -78,7 +247,25 @@ export class WithdrawalsService {
 
     const { earnedBalance } = await this.walletService.getBalance(userId);
     if (dto.amount > earnedBalance) {
-      throw new BadRequestException('Insufficient available balance');
+      throw new BadRequestException(
+        'You cannot withdraw more than your available balance.',
+      );
+    }
+
+    // Optionally remember these bank details for next time.
+    if (
+      dto.saveAccount &&
+      dto.bankName &&
+      dto.bankCode &&
+      dto.accountNumber &&
+      dto.accountName
+    ) {
+      await this.saveBankAccount(String(userId), {
+        bankName: dto.bankName,
+        bankCode: dto.bankCode,
+        accountNumber: dto.accountNumber,
+        accountName: dto.accountName,
+      });
     }
 
     // Create the request first so we have an _id to use as the idempotency key.
@@ -87,6 +274,7 @@ export class WithdrawalsService {
       amount: dto.amount,
       status: WithdrawalStatus.Pending,
       bankName: dto.bankName ?? null,
+      bankCode: dto.bankCode ?? null,
       accountNumber: dto.accountNumber ?? null,
       accountName: dto.accountName ?? null,
       requestedAt: new Date(),

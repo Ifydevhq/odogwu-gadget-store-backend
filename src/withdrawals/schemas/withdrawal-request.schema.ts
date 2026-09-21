@@ -47,6 +47,9 @@ export class WithdrawalRequest {
   bankName?: string;
 
   @Prop({ type: String, default: null })
+  bankCode?: string;
+
+  @Prop({ type: String, default: null })
   accountNumber?: string;
 
   @Prop({ type: String, default: null })
