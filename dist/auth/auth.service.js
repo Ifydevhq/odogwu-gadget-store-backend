@@ -175,6 +175,7 @@ let AuthService = class AuthService {
             verificationCode: null,
             verificationExpires: null,
         });
+        user.isEmailVerified = true;
         this.notificationsService.sendWelcome(user.email, user.firstName);
         this.alertsService.createAlert({
             userId: user._id,
@@ -184,7 +185,7 @@ let AuthService = class AuthService {
             entityType: 'user',
             entityId: user._id,
         }).catch(() => { });
-        return { message: 'Email verified successfully' };
+        return this.buildAuthResponse(user);
     }
     async resendVerification(email) {
         const user = await this.usersService.findByEmail(email);

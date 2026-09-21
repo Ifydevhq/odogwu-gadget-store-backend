@@ -6,9 +6,7 @@ export declare class AuthController {
     register(registerDto: RegisterDto): Promise<any>;
     login(loginDto: LoginDto): Promise<any>;
     googleAuth(googleAuthDto: GoogleAuthDto): Promise<any>;
-    verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<{
-        message: string;
-    }>;
+    verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<any>;
     resendVerification(dto: ResendVerificationDto): Promise<{
         message: string;
     }>;
