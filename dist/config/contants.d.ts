@@ -106,6 +106,8 @@ export declare enum AlertType {
     OrderCancelled = "order_cancelled",
     OrderRefunded = "order_refunded",
     NewOrderReceived = "new_order_received",
+    AffiliateSale = "affiliate_sale",
+    ReferralJoined = "referral_joined",
     ListingSubmitted = "listing_submitted",
     ListingApproved = "listing_approved",
     ListingRejected = "listing_rejected",

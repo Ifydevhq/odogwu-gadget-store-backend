@@ -195,6 +195,10 @@ export enum AlertType {
   // Orders — Seller
   NewOrderReceived = 'new_order_received',
 
+  // Affiliate & Referral
+  AffiliateSale = 'affiliate_sale',
+  ReferralJoined = 'referral_joined',
+
   // Listings
   ListingSubmitted = 'listing_submitted',
   ListingApproved = 'listing_approved',

@@ -503,6 +503,35 @@ export class OrdersService {
         })
         .catch(() => {});
     }
+
+    // Affiliate: notify each affiliate whose link brought in an item on this
+    // order, once, with their total pending commission across the order's items.
+    const affiliateEarnings = new Map<string, number>();
+    for (const item of order.items || []) {
+      const affiliateId = (item as any).affiliateUserId?.toString();
+      const amount = (item as any).affiliateCommissionAmount || 0;
+      if (affiliateId && amount > 0 && affiliateId !== buyerId) {
+        affiliateEarnings.set(
+          affiliateId,
+          (affiliateEarnings.get(affiliateId) || 0) + amount,
+        );
+      }
+    }
+    for (const [affiliateId, amount] of affiliateEarnings) {
+      const naira = `₦${(amount / 100).toLocaleString('en-NG')}`;
+      this.alertsService
+        .createAlertAndPush({
+          userId: affiliateId,
+          type: AlertType.AffiliateSale,
+          title: 'Affiliate sale! 💸',
+          message: `Someone ordered ${itemsSummary} through your affiliate link. You'll earn ${naira} once the order completes.`,
+          entityId: order._id.toString(),
+          entityType: 'order',
+          metadata: { orderNumber: order.orderNumber, commissionAmount: amount },
+          route: '/affiliate',
+        })
+        .catch(() => {});
+    }
   }
 
   async create(
