@@ -39,6 +39,7 @@ const alerts_module_1 = require("./alerts/alerts.module");
 const chat_module_1 = require("./chat/chat.module");
 const push_module_1 = require("./push/push.module");
 const announcements_module_1 = require("./announcements/announcements.module");
+const wallet_module_1 = require("./wallet/wallet.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -88,6 +89,7 @@ exports.AppModule = AppModule = __decorate([
             chat_module_1.ChatModule,
             push_module_1.PushModule,
             announcements_module_1.AnnouncementsModule,
+            wallet_module_1.WalletModule,
         ],
         controllers: [app_controller_1.AppController],
     })

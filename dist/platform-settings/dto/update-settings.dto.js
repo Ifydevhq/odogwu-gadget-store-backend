@@ -147,4 +147,55 @@ __decorate([
     (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], UpdatePlatformSettingsDto.prototype, "maxReturnHoursBeforeAutoComplete", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Welcome/promo credit per verified phone in kobo (0 = disabled)' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "welcomeCreditAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Max % of an order payable from promo credit', example: 20 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "creditMaxPercentPerOrder", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Referee cumulative spend that triggers referrer reward, in kobo' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "referralMinOrderAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Referrer reward amount in kobo' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "referralRewardAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Days an affiliate commission stays pending before maturing', example: 7 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "affiliateHoldDays", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Default affiliate commission %', example: 0 }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.Max)(100),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "affiliateDefaultCommissionPercent", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({ required: false, description: 'Minimum wallet withdrawal request in kobo' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], UpdatePlatformSettingsDto.prototype, "minWithdrawalAmount", void 0);
 //# sourceMappingURL=update-settings.dto.js.map

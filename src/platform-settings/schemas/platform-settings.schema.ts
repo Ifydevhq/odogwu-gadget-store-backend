@@ -109,6 +109,36 @@ export class PlatformSettings {
   /** Max hours a buyer has to return before the order auto-completes (default 72h) */
   @Prop({ default: 72 })
   maxReturnHoursBeforeAutoComplete: number;
+
+  // ─── Wallet / Store-Credit Settings ────────────────────────────
+
+  /** Welcome/promo credit granted per verified phone, in kobo (0 = disabled). */
+  @Prop({ type: Number, default: 0 })
+  welcomeCreditAmount: number;
+
+  /** Max % of an order payable from PROMO credit (default 20%). */
+  @Prop({ type: Number, default: 20 })
+  creditMaxPercentPerOrder: number;
+
+  /** Cumulative completed spend by a referee that triggers the referrer reward, in kobo (default ₦10,000). */
+  @Prop({ type: Number, default: 1000000 })
+  referralMinOrderAmount: number;
+
+  /** Referrer reward amount, in kobo (default ₦1,000). */
+  @Prop({ type: Number, default: 100000 })
+  referralRewardAmount: number;
+
+  /** Days an affiliate commission stays pending before maturing (default 7). */
+  @Prop({ type: Number, default: 7 })
+  affiliateHoldDays: number;
+
+  /** Optional default affiliate commission % (default 0). */
+  @Prop({ type: Number, default: 0 })
+  affiliateDefaultCommissionPercent: number;
+
+  /** Minimum wallet withdrawal request, in kobo (default ₦1,000). */
+  @Prop({ type: Number, default: 100000 })
+  minWithdrawalAmount: number;
 }
 
 export const PlatformSettingsSchema =

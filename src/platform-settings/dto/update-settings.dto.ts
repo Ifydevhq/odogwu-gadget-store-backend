@@ -127,4 +127,50 @@ export class UpdatePlatformSettingsDto {
   @IsOptional()
   @IsNumber()
   maxReturnHoursBeforeAutoComplete?: number;
+
+  // ─── Wallet / Store-Credit Settings ────────────────────────────
+
+  @ApiProperty({ required: false, description: 'Welcome/promo credit per verified phone in kobo (0 = disabled)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  welcomeCreditAmount?: number;
+
+  @ApiProperty({ required: false, description: 'Max % of an order payable from promo credit', example: 20 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  creditMaxPercentPerOrder?: number;
+
+  @ApiProperty({ required: false, description: 'Referee cumulative spend that triggers referrer reward, in kobo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  referralMinOrderAmount?: number;
+
+  @ApiProperty({ required: false, description: 'Referrer reward amount in kobo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  referralRewardAmount?: number;
+
+  @ApiProperty({ required: false, description: 'Days an affiliate commission stays pending before maturing', example: 7 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  affiliateHoldDays?: number;
+
+  @ApiProperty({ required: false, description: 'Default affiliate commission %', example: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  affiliateDefaultCommissionPercent?: number;
+
+  @ApiProperty({ required: false, description: 'Minimum wallet withdrawal request in kobo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minWithdrawalAmount?: number;
 }

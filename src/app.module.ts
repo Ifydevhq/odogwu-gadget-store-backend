@@ -51,6 +51,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { WalletModule } from './wallet/wallet.module';
 
 @Module({
   imports: [
@@ -121,6 +122,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     ChatModule,
     PushModule,
     AnnouncementsModule,
+    WalletModule,
   ],
   controllers: [AppController],
 })

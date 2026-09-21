@@ -24,6 +24,13 @@ export declare class PlatformSettings {
     maxFileSizeBytes: number;
     maxFilesPerUpload: number;
     maxReturnHoursBeforeAutoComplete: number;
+    welcomeCreditAmount: number;
+    creditMaxPercentPerOrder: number;
+    referralMinOrderAmount: number;
+    referralRewardAmount: number;
+    affiliateHoldDays: number;
+    affiliateDefaultCommissionPercent: number;
+    minWithdrawalAmount: number;
 }
 export declare const PlatformSettingsSchema: import("mongoose").Schema<PlatformSettings, import("mongoose").Model<PlatformSettings, any, any, any, import("mongoose").Document<unknown, any, PlatformSettings> & PlatformSettings & {
     _id: import("mongoose").Types.ObjectId;
