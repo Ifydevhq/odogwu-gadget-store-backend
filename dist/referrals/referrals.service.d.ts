@@ -7,6 +7,7 @@ import { UsersService } from '../users/users.service';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { AlertsService } from '../alerts/alerts.service';
 export declare class ReferralsService {
     private readonly referralModel;
     private readonly phoneRegistryModel;
@@ -15,9 +16,11 @@ export declare class ReferralsService {
     private readonly platformSettingsService;
     private readonly walletService;
     private readonly configService;
+    private readonly alertsService;
     private readonly logger;
-    constructor(referralModel: Model<ReferralDocument>, phoneRegistryModel: Model<PhoneRegistryDocument>, orderModel: Model<OrderDocument>, usersService: UsersService, platformSettingsService: PlatformSettingsService, walletService: WalletService, configService: ConfigService);
+    constructor(referralModel: Model<ReferralDocument>, phoneRegistryModel: Model<PhoneRegistryDocument>, orderModel: Model<OrderDocument>, usersService: UsersService, platformSettingsService: PlatformSettingsService, walletService: WalletService, configService: ConfigService, alertsService: AlertsService);
     registerReferral(referrerId: string | Types.ObjectId, refereeId: string | Types.ObjectId): Promise<ReferralDocument | null>;
+    private notifyReferrerJoined;
     activateOnPhoneVerified(refereeId: string | Types.ObjectId, phoneE164: string): Promise<void>;
     recordCompletedOrder(refereeId: string | Types.ObjectId, _orderAmount?: number): Promise<void>;
     private buildReferralLink;

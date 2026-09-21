@@ -124,6 +124,8 @@ var AlertType;
     AlertType["OrderCancelled"] = "order_cancelled";
     AlertType["OrderRefunded"] = "order_refunded";
     AlertType["NewOrderReceived"] = "new_order_received";
+    AlertType["AffiliateSale"] = "affiliate_sale";
+    AlertType["ReferralJoined"] = "referral_joined";
     AlertType["ListingSubmitted"] = "listing_submitted";
     AlertType["ListingApproved"] = "listing_approved";
     AlertType["ListingRejected"] = "listing_rejected";

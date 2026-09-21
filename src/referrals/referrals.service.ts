@@ -34,7 +34,8 @@ import {
   WalletTxnType,
 } from '../wallet/schemas/wallet-transaction.schema';
 import { PaginationDto } from '../common/dto/pagination.dto';
-import { OrderStatus } from '@config/contants';
+import { OrderStatus, AlertType } from '@config/contants';
+import { AlertsService } from '../alerts/alerts.service';
 
 @Injectable()
 export class ReferralsService {
@@ -51,6 +52,8 @@ export class ReferralsService {
     private readonly platformSettingsService: PlatformSettingsService,
     private readonly walletService: WalletService,
     private readonly configService: ConfigService,
+    // @Global AlertsModule — used to notify the referrer at signup.
+    private readonly alertsService: AlertsService,
   ) {}
 
   // ─── 1. Register at signup ───────────────────────────────
@@ -76,12 +79,17 @@ export class ReferralsService {
         .exec();
       if (existing) return existing;
 
-      return await this.referralModel.create({
+      const created = await this.referralModel.create({
         referrerId: new Types.ObjectId(referrer),
         refereeId: new Types.ObjectId(referee),
         status: ReferralStatus.Pending,
         cumulativeQualifyingSpend: 0,
       });
+
+      // Tell the referrer a new person signed up with their code (best-effort).
+      this.notifyReferrerJoined(referrer, referee).catch(() => {});
+
+      return created;
     } catch (err: any) {
       // Unique index race (two concurrent signups) — return the existing row.
       if (err?.code === 11000) {
@@ -94,6 +102,39 @@ export class ReferralsService {
       );
       return null;
     }
+  }
+
+  /**
+   * In-app + push notification to the referrer that a new user joined with
+   * their referral code. Best-effort: never throws (the caller ignores errors).
+   */
+  private async notifyReferrerJoined(
+    referrerId: string,
+    refereeId: string,
+  ): Promise<void> {
+    let refereeName = 'Someone';
+    try {
+      const referee = await this.usersService.findById(refereeId);
+      const name = [referee?.firstName, referee?.lastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (name) refereeName = name;
+    } catch {
+      /* fall back to the generic name */
+    }
+
+    await this.alertsService.createAlertAndPush({
+      userId: referrerId,
+      type: AlertType.ReferralJoined,
+      title: 'New referral! 🎉',
+      message:
+        `${refereeName} just signed up with your referral code. ` +
+        `You'll earn your reward once they verify their phone and shop.`,
+      entityId: refereeId,
+      entityType: 'user',
+      route: '/referrals',
+    });
   }
 
   // ─── 2. Activate on phone verification ───────────────────

@@ -289,15 +289,25 @@ export class Listing extends BaseSchema {
   totalSales: number;
 
   // ─── Affiliate Program ───────────────────────────────────
-  // When enabled, any affiliate user can share a per-product link and earn
-  // `affiliateCommissionPercent`% of the item total when a referred purchase
-  // completes. Falls back to the platform default percent when 0.
+  // When enabled, any affiliate user can share a per-product link and earn a
+  // commission when a referred purchase completes. The reward is either a
+  // PERCENT of the item total (`affiliateCommissionPercent`, falling back to
+  // the platform default when 0) or a FLAT amount in kobo
+  // (`affiliateCommissionAmount`), selected by `affiliateCommissionType`.
 
   @Prop({ type: Boolean, default: false })
   affiliateEnabled: boolean;
 
+  /** How the affiliate reward is calculated: 'percent' | 'flat'. */
+  @Prop({ type: String, enum: ['percent', 'flat'], default: 'percent' })
+  affiliateCommissionType: string;
+
   @Prop({ type: Number, default: 0, min: 0, max: 100 })
   affiliateCommissionPercent: number;
+
+  /** Flat commission in kobo (used when affiliateCommissionType === 'flat'). */
+  @Prop({ type: Number, default: 0, min: 0 })
+  affiliateCommissionAmount: number;
 }
 
 export const ListingSchema = SchemaFactory.createForClass(Listing);

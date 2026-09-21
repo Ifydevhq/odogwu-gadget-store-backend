@@ -76,8 +76,12 @@ export class AffiliateController {
 
   @Get('products')
   @ApiOperation({ summary: 'List affiliate-enabled products (paginated)' })
+  @ApiQuery({ name: 'search', required: false })
   @ResponseMessage('Affiliate products retrieved successfully')
-  async listProducts(@Query() paging: PaginationDto) {
-    return this.affiliateService.listAffiliateProducts(paging);
+  async listProducts(
+    @Query() paging: PaginationDto,
+    @Query('search') search?: string,
+  ) {
+    return this.affiliateService.listAffiliateProducts(paging, search);
   }
 }

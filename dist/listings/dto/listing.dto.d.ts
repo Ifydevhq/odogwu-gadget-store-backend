@@ -31,7 +31,9 @@ export declare class CreateListingDto {
     location?: ListingLocationDto;
     whatsappNumber?: string;
     affiliateEnabled?: boolean;
+    affiliateCommissionType?: string;
     affiliateCommissionPercent?: number;
+    affiliateCommissionAmount?: number;
 }
 declare const UpdateListingDto_base: import("@nestjs/common").Type<Partial<Omit<CreateListingDto, "type" | "storeId">>>;
 export declare class UpdateListingDto extends UpdateListingDto_base {

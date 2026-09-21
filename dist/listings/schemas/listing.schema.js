@@ -212,9 +212,17 @@ __decorate([
     __metadata("design:type", Boolean)
 ], Listing.prototype, "affiliateEnabled", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: String, enum: ['percent', 'flat'], default: 'percent' }),
+    __metadata("design:type", String)
+], Listing.prototype, "affiliateCommissionType", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0, max: 100 }),
     __metadata("design:type", Number)
 ], Listing.prototype, "affiliateCommissionPercent", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0 }),
+    __metadata("design:type", Number)
+], Listing.prototype, "affiliateCommissionAmount", void 0);
 exports.Listing = Listing = __decorate([
     (0, mongoose_1.Schema)({
         timestamps: true,

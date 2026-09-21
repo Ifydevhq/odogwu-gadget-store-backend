@@ -51,7 +51,7 @@ export declare class AffiliateService {
         affiliateCode: string;
         link: string;
     }>;
-    listAffiliateProducts(paging: PaginationDto): Promise<{
+    listAffiliateProducts(paging: PaginationDto, search?: string): Promise<{
         items: ListingDocument[];
         total: number;
         page: number;

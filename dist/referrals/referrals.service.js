@@ -26,8 +26,9 @@ const platform_settings_service_1 = require("../platform-settings/platform-setti
 const wallet_service_1 = require("../wallet/wallet.service");
 const wallet_transaction_schema_1 = require("../wallet/schemas/wallet-transaction.schema");
 const contants_1 = require("../config/contants");
+const alerts_service_1 = require("../alerts/alerts.service");
 let ReferralsService = ReferralsService_1 = class ReferralsService {
-    constructor(referralModel, phoneRegistryModel, orderModel, usersService, platformSettingsService, walletService, configService) {
+    constructor(referralModel, phoneRegistryModel, orderModel, usersService, platformSettingsService, walletService, configService, alertsService) {
         this.referralModel = referralModel;
         this.phoneRegistryModel = phoneRegistryModel;
         this.orderModel = orderModel;
@@ -35,6 +36,7 @@ let ReferralsService = ReferralsService_1 = class ReferralsService {
         this.platformSettingsService = platformSettingsService;
         this.walletService = walletService;
         this.configService = configService;
+        this.alertsService = alertsService;
         this.logger = new common_1.Logger(ReferralsService_1.name);
     }
     async registerReferral(referrerId, refereeId) {
@@ -49,12 +51,14 @@ let ReferralsService = ReferralsService_1 = class ReferralsService {
                 .exec();
             if (existing)
                 return existing;
-            return await this.referralModel.create({
+            const created = await this.referralModel.create({
                 referrerId: new mongoose_2.Types.ObjectId(referrer),
                 refereeId: new mongoose_2.Types.ObjectId(referee),
                 status: referral_schema_1.ReferralStatus.Pending,
                 cumulativeQualifyingSpend: 0,
             });
+            this.notifyReferrerJoined(referrer, referee).catch(() => { });
+            return created;
         }
         catch (err) {
             if (err?.code === 11000) {
@@ -65,6 +69,30 @@ let ReferralsService = ReferralsService_1 = class ReferralsService {
             this.logger.error(`registerReferral failed (referrer=${referrer} referee=${referee}): ${err?.message}`);
             return null;
         }
+    }
+    async notifyReferrerJoined(referrerId, refereeId) {
+        let refereeName = 'Someone';
+        try {
+            const referee = await this.usersService.findById(refereeId);
+            const name = [referee?.firstName, referee?.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim();
+            if (name)
+                refereeName = name;
+        }
+        catch {
+        }
+        await this.alertsService.createAlertAndPush({
+            userId: referrerId,
+            type: contants_1.AlertType.ReferralJoined,
+            title: 'New referral! 🎉',
+            message: `${refereeName} just signed up with your referral code. ` +
+                `You'll earn your reward once they verify their phone and shop.`,
+            entityId: refereeId,
+            entityType: 'user',
+            route: '/referrals',
+        });
     }
     async activateOnPhoneVerified(refereeId, phoneE164) {
         try {
@@ -244,6 +272,7 @@ exports.ReferralsService = ReferralsService = ReferralsService_1 = __decorate([
         users_service_1.UsersService,
         platform_settings_service_1.PlatformSettingsService,
         wallet_service_1.WalletService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        alerts_service_1.AlertsService])
 ], ReferralsService);
 //# sourceMappingURL=referrals.service.js.map
