@@ -12,7 +12,9 @@ const mongoose_1 = require("@nestjs/mongoose");
 const users_module_1 = require("../users/users.module");
 const platform_settings_module_1 = require("../platform-settings/platform-settings.module");
 const phone_registry_schema_1 = require("./schemas/phone-registry.schema");
+const otp_challenge_schema_1 = require("./schemas/otp-challenge.schema");
 const phone_verification_service_1 = require("./phone-verification.service");
+const whatsapp_verification_provider_1 = require("./whatsapp-verification.provider");
 const phone_service_1 = require("./phone.service");
 const phone_controller_1 = require("./phone.controller");
 const sms_verification_provider_1 = require("./sms-verification.provider");
@@ -25,6 +27,7 @@ exports.PhoneVerificationModule = PhoneVerificationModule = __decorate([
         imports: [
             mongoose_1.MongooseModule.forFeature([
                 { name: phone_registry_schema_1.PhoneRegistry.name, schema: phone_registry_schema_1.PhoneRegistrySchema },
+                { name: otp_challenge_schema_1.OtpChallenge.name, schema: otp_challenge_schema_1.OtpChallengeSchema },
             ]),
             users_module_1.UsersModule,
             platform_settings_module_1.PlatformSettingsModule,
@@ -32,9 +35,11 @@ exports.PhoneVerificationModule = PhoneVerificationModule = __decorate([
         controllers: [phone_controller_1.PhoneController],
         providers: [
             phone_verification_service_1.PhoneVerificationService,
+            whatsapp_verification_provider_1.WhatsAppVerificationProvider,
             {
                 provide: sms_verification_provider_1.SMS_VERIFICATION_PROVIDER,
-                useExisting: phone_verification_service_1.PhoneVerificationService,
+                useFactory: (whatsapp, twilio) => (whatsapp.enabled ? whatsapp : twilio),
+                inject: [whatsapp_verification_provider_1.WhatsAppVerificationProvider, phone_verification_service_1.PhoneVerificationService],
             },
             phone_service_1.PhoneService,
         ],

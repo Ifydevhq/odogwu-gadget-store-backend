@@ -21,7 +21,12 @@ import {
   PhoneRegistry,
   PhoneRegistrySchema,
 } from './schemas/phone-registry.schema';
+import {
+  OtpChallenge,
+  OtpChallengeSchema,
+} from './schemas/otp-challenge.schema';
 import { PhoneVerificationService } from './phone-verification.service';
+import { WhatsAppVerificationProvider } from './whatsapp-verification.provider';
 import { PhoneService } from './phone.service';
 import { PhoneController } from './phone.controller';
 import { SMS_VERIFICATION_PROVIDER } from './sms-verification.provider';
@@ -31,18 +36,25 @@ import { SMS_VERIFICATION_PROVIDER } from './sms-verification.provider';
   imports: [
     MongooseModule.forFeature([
       { name: PhoneRegistry.name, schema: PhoneRegistrySchema },
+      { name: OtpChallenge.name, schema: OtpChallengeSchema },
     ]),
     UsersModule,
     PlatformSettingsModule,
   ],
   controllers: [PhoneController],
   providers: [
-    PhoneVerificationService,
-    // The concrete provider is bound behind an interface token so it can be
-    // swapped for another SMS vendor without changing callers.
+    PhoneVerificationService, // Twilio Verify
+    WhatsAppVerificationProvider, // WhatsApp Cloud API OTP
+    // The active provider is chosen at runtime: WhatsApp when its Cloud API is
+    // configured, otherwise Twilio (which is itself disabled without creds).
+    // Swap the factory to move to yet another SMS vendor without touching callers.
     {
       provide: SMS_VERIFICATION_PROVIDER,
-      useExisting: PhoneVerificationService,
+      useFactory: (
+        whatsapp: WhatsAppVerificationProvider,
+        twilio: PhoneVerificationService,
+      ) => (whatsapp.enabled ? whatsapp : twilio),
+      inject: [WhatsAppVerificationProvider, PhoneVerificationService],
     },
     PhoneService,
   ],
