@@ -352,6 +352,10 @@ export class ReferralsService {
       name: string;
       status: ReferralStatus;
       cumulativeQualifyingSpend: number;
+      phoneVerified: boolean;
+      minSpend: number;
+      remainingSpend: number;
+      rewardAmount: number;
       qualifiedAt?: Date;
       rewardedAt?: Date;
       createdAt: Date;
@@ -366,24 +370,35 @@ export class ReferralsService {
     const referrerId = new Types.ObjectId(userId);
     const skip = (page - 1) * perPage;
 
-    const [rows, total] = await Promise.all([
+    const [rows, total, settings] = await Promise.all([
       this.referralModel
         .find({ referrerId })
-        .populate('refereeId', 'firstName lastName')
+        .populate('refereeId', 'firstName lastName isPhoneVerified')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(perPage)
         .exec(),
       this.referralModel.countDocuments({ referrerId }).exec(),
+      this.platformSettingsService.getSettings(),
     ]);
+
+    // What each referee must still do before the referrer earns the reward:
+    // verify their phone AND reach the cumulative completed-spend threshold.
+    const minSpend = settings?.referralMinOrderAmount ?? 0;
+    const rewardAmount = settings?.referralRewardAmount ?? 0;
 
     const items = rows.map((r) => {
       const referee = r.refereeId as any;
+      const spend = r.cumulativeQualifyingSpend || 0;
       return {
         id: r._id.toString(),
         name: this.maskName(referee?.firstName, referee?.lastName),
         status: r.status,
-        cumulativeQualifyingSpend: r.cumulativeQualifyingSpend,
+        cumulativeQualifyingSpend: spend,
+        phoneVerified: !!referee?.isPhoneVerified,
+        minSpend,
+        remainingSpend: Math.max(0, minSpend - spend),
+        rewardAmount,
         qualifiedAt: r.qualifiedAt,
         rewardedAt: r.rewardedAt,
         createdAt: r.createdAt,
