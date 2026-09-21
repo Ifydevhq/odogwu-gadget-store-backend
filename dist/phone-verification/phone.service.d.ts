@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import { UsersService } from '../users/users.service';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
@@ -12,8 +13,11 @@ export declare class PhoneService {
     private readonly platformSettingsService;
     private readonly walletService;
     private readonly referralsService;
+    private readonly configService;
     private readonly logger;
-    constructor(smsProvider: SmsVerificationProvider, phoneRegistryModel: Model<PhoneRegistryDocument>, usersService: UsersService, platformSettingsService: PlatformSettingsService, walletService: WalletService, referralsService: ReferralsService);
+    constructor(smsProvider: SmsVerificationProvider, phoneRegistryModel: Model<PhoneRegistryDocument>, usersService: UsersService, platformSettingsService: PlatformSettingsService, walletService: WalletService, referralsService: ReferralsService, configService: ConfigService);
+    private get devBypassEnabled();
+    private static readonly DEV_BYPASS_CODES;
     requestOtp(userId: string, rawPhoneNumber: string): Promise<{
         sent: true;
     }>;

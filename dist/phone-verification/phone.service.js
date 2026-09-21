@@ -15,6 +15,7 @@ var PhoneService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PhoneService = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
 const mongoose_2 = require("mongoose");
 const users_service_1 = require("../users/users.service");
@@ -26,20 +27,31 @@ const sms_verification_provider_1 = require("./sms-verification.provider");
 const phone_util_1 = require("./phone.util");
 const referrals_service_1 = require("../referrals/referrals.service");
 let PhoneService = PhoneService_1 = class PhoneService {
-    constructor(smsProvider, phoneRegistryModel, usersService, platformSettingsService, walletService, referralsService) {
+    constructor(smsProvider, phoneRegistryModel, usersService, platformSettingsService, walletService, referralsService, configService) {
         this.smsProvider = smsProvider;
         this.phoneRegistryModel = phoneRegistryModel;
         this.usersService = usersService;
         this.platformSettingsService = platformSettingsService;
         this.walletService = walletService;
         this.referralsService = referralsService;
+        this.configService = configService;
         this.logger = new common_1.Logger(PhoneService_1.name);
+    }
+    get devBypassEnabled() {
+        return ((this.configService.get('OTP_DEV_BYPASS') || '')
+            .trim()
+            .toLowerCase() === 'true');
     }
     async requestOtp(userId, rawPhoneNumber) {
         const phoneE164 = (0, phone_util_1.normalizeNigerianPhone)(rawPhoneNumber);
         const owner = await this.usersService.findVerifiedByPhoneE164(phoneE164);
         if (owner && owner._id.toString() !== userId) {
             throw new common_1.BadRequestException('This phone number is already in use');
+        }
+        if (this.devBypassEnabled) {
+            this.logger.warn(`OTP_DEV_BYPASS active — skipping SMS for ${phoneE164}. ` +
+                `Use code ${PhoneService_1.DEV_BYPASS_CODES.join(' or ')} to verify.`);
+            return { sent: true };
         }
         await this.smsProvider.sendCode(phoneE164);
         return { sent: true };
@@ -50,7 +62,9 @@ let PhoneService = PhoneService_1 = class PhoneService {
         if (owner && owner._id.toString() !== userId) {
             throw new common_1.BadRequestException('This phone number is already in use');
         }
-        const approved = await this.smsProvider.checkCode(phoneE164, code);
+        const approved = this.devBypassEnabled
+            ? PhoneService_1.DEV_BYPASS_CODES.includes((code || '').trim())
+            : await this.smsProvider.checkCode(phoneE164, code);
         if (!approved) {
             throw new common_1.BadRequestException('Invalid or expired verification code');
         }
@@ -89,6 +103,7 @@ let PhoneService = PhoneService_1 = class PhoneService {
     }
 };
 exports.PhoneService = PhoneService;
+PhoneService.DEV_BYPASS_CODES = ['000000', '123456'];
 exports.PhoneService = PhoneService = PhoneService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, common_1.Inject)(sms_verification_provider_1.SMS_VERIFICATION_PROVIDER)),
@@ -97,6 +112,7 @@ exports.PhoneService = PhoneService = PhoneService_1 = __decorate([
         users_service_1.UsersService,
         platform_settings_service_1.PlatformSettingsService,
         wallet_service_1.WalletService,
-        referrals_service_1.ReferralsService])
+        referrals_service_1.ReferralsService,
+        config_1.ConfigService])
 ], PhoneService);
 //# sourceMappingURL=phone.service.js.map
