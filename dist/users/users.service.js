@@ -144,8 +144,7 @@ let UsersService = class UsersService {
                 isPhoneVerified: true,
                 phoneE164,
                 phoneVerifiedAt: new Date(),
-                'mobile.phoneNumber': phoneE164,
-                'mobile.isoCode': 'NG',
+                mobile: { phoneNumber: phoneE164, isoCode: 'NG' },
             },
         }, { new: true, runValidators: true })
             .exec();
