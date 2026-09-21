@@ -951,13 +951,15 @@ export class OrdersService {
     }
 
     try {
-      await this.alertsService.createAlert({
+      await this.alertsService.createAlertAndPush({
         userId: order.buyerId.toString(),
         type: AlertType.PaymentSuccessful,
         title: 'Payment received ✅',
         message: `We have received payment for order #${order.orderNumber}.`,
-        entityId: order._id,
+        entityId: order._id.toString(),
         entityType: 'order',
+        metadata: { orderNumber: order.orderNumber },
+        route: `/orders/${order._id.toString()}`,
       });
     } catch {
       /* non-fatal */
@@ -1026,15 +1028,20 @@ export class OrdersService {
     }
 
     try {
-      await this.alertsService.createAlert({
+      // Push + in-app (online orders already push via notifyOrderCreated; COD
+      // suppressed the buyer alert there and only created an in-app one here,
+      // so pay-on-delivery buyers never got a push).
+      await this.alertsService.createAlertAndPush({
         userId: order.buyerId.toString(),
         type: AlertType.OrderPlaced,
         title: 'Order placed 🛵',
         message:
           `We have received order #${order.orderNumber}. ` +
           `Our team will reach out to confirm it — payment is due on delivery.`,
-        entityId: order._id,
+        entityId: order._id.toString(),
         entityType: 'order',
+        metadata: { orderNumber: order.orderNumber },
+        route: `/orders/${order._id.toString()}`,
       });
     } catch {
       /* non-fatal */
