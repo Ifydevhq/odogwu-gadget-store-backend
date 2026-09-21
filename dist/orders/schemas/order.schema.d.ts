@@ -14,6 +14,10 @@ declare class OrderItem {
     sellerId: Types.ObjectId;
     creatorId: Types.ObjectId;
     commissionRate: number;
+    affiliateCode?: string;
+    affiliateUserId?: Types.ObjectId;
+    affiliateCommissionPercent?: number;
+    affiliateCommissionAmount?: number;
 }
 declare class ShippingAddress {
     fullName: string;

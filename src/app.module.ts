@@ -54,6 +54,8 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { WalletModule } from './wallet/wallet.module';
 import { PhoneVerificationModule } from './phone-verification/phone-verification.module';
 import { ReferralsModule } from './referrals/referrals.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 
 @Module({
   imports: [
@@ -127,6 +129,8 @@ import { ReferralsModule } from './referrals/referrals.module';
     WalletModule,
     PhoneVerificationModule,
     ReferralsModule,
+    AffiliateModule,
+    WithdrawalsModule,
   ],
   controllers: [AppController],
 })

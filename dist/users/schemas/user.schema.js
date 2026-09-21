@@ -103,6 +103,10 @@ __decorate([
     __metadata("design:type", mongoose_2.Types.ObjectId)
 ], User.prototype, "referredBy", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: Boolean, default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isAffiliate", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] }),
     __metadata("design:type", String)
 ], User.prototype, "gender", void 0);

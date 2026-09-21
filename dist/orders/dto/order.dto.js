@@ -122,6 +122,18 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CreateOrderDto.prototype, "walletCreditAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Optional map of listingId -> affiliate code. When a code resolves to a ' +
+            'valid affiliate (not the buyer) and the listing has affiliate enabled, ' +
+            'the commission is snapshotted onto the order item. Invalid entries are ' +
+            'silently ignored and never block checkout.',
+        example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+    }),
+    (0, class_validator_1.IsObject)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Object)
+], CreateOrderDto.prototype, "affiliateCodes", void 0);
 class UpdateOrderStatusDto {
 }
 exports.UpdateOrderStatusDto = UpdateOrderStatusDto;

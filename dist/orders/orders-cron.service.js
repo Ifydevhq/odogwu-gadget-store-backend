@@ -21,12 +21,14 @@ const mongoose_2 = require("mongoose");
 const order_schema_1 = require("./schemas/order.schema");
 const platform_settings_service_1 = require("../platform-settings/platform-settings.service");
 const referrals_service_1 = require("../referrals/referrals.service");
+const affiliate_service_1 = require("../affiliate/affiliate.service");
 const contants_1 = require("../config/contants");
 let OrdersCronService = OrdersCronService_1 = class OrdersCronService {
-    constructor(orderModel, platformSettingsService, referralsService) {
+    constructor(orderModel, platformSettingsService, referralsService, affiliateService) {
         this.orderModel = orderModel;
         this.platformSettingsService = platformSettingsService;
         this.referralsService = referralsService;
+        this.affiliateService = affiliateService;
         this.logger = new common_1.Logger(OrdersCronService_1.name);
     }
     async autoCompleteDeliveredOrders() {
@@ -39,7 +41,7 @@ let OrdersCronService = OrdersCronService_1 = class OrdersCronService {
                 .find({
                 status: contants_1.OrderStatus.Delivered,
                 'trackingInfo.deliveredAt': { $lte: cutoffDate },
-            }, { buyerId: 1 })
+            })
                 .exec();
             const result = await this.orderModel.updateMany({
                 status: contants_1.OrderStatus.Delivered,
@@ -64,6 +66,9 @@ let OrdersCronService = OrdersCronService_1 = class OrdersCronService {
                 for (const buyerId of distinctBuyers) {
                     await this.referralsService.recordCompletedOrder(buyerId);
                 }
+                for (const order of qualifying) {
+                    await this.affiliateService.processOrderCompletion(order);
+                }
             }
         }
         catch (error) {
@@ -83,6 +88,7 @@ exports.OrdersCronService = OrdersCronService = OrdersCronService_1 = __decorate
     __param(0, (0, mongoose_1.InjectModel)(order_schema_1.Order.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
         platform_settings_service_1.PlatformSettingsService,
-        referrals_service_1.ReferralsService])
+        referrals_service_1.ReferralsService,
+        affiliate_service_1.AffiliateService])
 ], OrdersCronService);
 //# sourceMappingURL=orders-cron.service.js.map

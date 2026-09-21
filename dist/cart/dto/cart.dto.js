@@ -166,4 +166,14 @@ __decorate([
     (0, class_validator_1.Min)(0),
     __metadata("design:type", Number)
 ], CheckoutCartDto.prototype, "walletCreditAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Optional map of listingId -> affiliate code. Resolved per item at ' +
+            'order build time; invalid entries are ignored and never block checkout.',
+        example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CheckoutCartDto.prototype, "affiliateCodes", void 0);
 //# sourceMappingURL=cart.dto.js.map

@@ -366,6 +366,7 @@ export class CartService {
     paymentMethod: 'paystack' | 'opay' | 'pay_on_delivery' = 'paystack',
     applyWalletCredit: boolean = false,
     walletCreditAmount?: number,
+    affiliateCodes?: Record<string, string>,
   ) {
     // 1. Get and validate cart
     const cart = await this.cartModel
@@ -491,6 +492,7 @@ export class CartService {
         wantsCredit
           ? { apply: true, capKobo: walletCreditAmount }
           : undefined,
+        affiliateCodes,
       );
 
       // Remove the checked-out items from the cart immediately.
@@ -557,6 +559,7 @@ export class CartService {
         deliveryFee,
         true,
         { mode: 'reserve', promo: creditPlan.promo, earned: creditPlan.earned },
+        affiliateCodes,
       );
 
       await this.ordersService.confirmPayment(
@@ -636,6 +639,8 @@ export class CartService {
         creditPlan.total > 0
           ? { promo: creditPlan.promo, earned: creditPlan.earned }
           : null,
+      // Affiliate attribution — applied to order items at fulfilment.
+      affiliateCodes: affiliateCodes || null,
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
     });
 
@@ -713,6 +718,7 @@ export class CartService {
             earned: sessionBreakdown.earned || 0,
           }
         : undefined,
+      (session as any).affiliateCodes || undefined,
     );
 
     // Mark as paid immediately since payment is already confirmed.

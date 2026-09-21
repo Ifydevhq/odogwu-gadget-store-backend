@@ -287,6 +287,17 @@ export class Listing extends BaseSchema {
 
   @Prop({ type: Number, default: 0 })
   totalSales: number;
+
+  // ─── Affiliate Program ───────────────────────────────────
+  // When enabled, any affiliate user can share a per-product link and earn
+  // `affiliateCommissionPercent`% of the item total when a referred purchase
+  // completes. Falls back to the platform default percent when 0.
+
+  @Prop({ type: Boolean, default: false })
+  affiliateEnabled: boolean;
+
+  @Prop({ type: Number, default: 0, min: 0, max: 100 })
+  affiliateCommissionPercent: number;
 }
 
 export const ListingSchema = SchemaFactory.createForClass(Listing);

@@ -107,6 +107,12 @@ export class CheckoutSession {
   @Prop({ type: String, default: null })
   buyerNote?: string;
 
+  // ─── Affiliate attribution (listingId -> affiliate code) ──
+  // Carried from checkout to fulfilment so commission can be snapshotted onto
+  // the order items once payment confirms.
+  @Prop({ type: Object, default: null })
+  affiliateCodes?: Record<string, string>;
+
   // ─── Totals ───────────────────────────────────────────────
 
   @Prop({ type: Number, required: true })

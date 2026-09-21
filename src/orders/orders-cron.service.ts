@@ -24,6 +24,7 @@ import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 import { OrderStatus } from '@config/contants';
 
 @Injectable()
@@ -35,6 +36,8 @@ export class OrdersCronService {
     private platformSettingsService: PlatformSettingsService,
     // @Global ReferralsModule — injected directly to avoid a module cycle.
     private referralsService: ReferralsService,
+    // @Global AffiliateModule — injected directly to avoid a module cycle.
+    private affiliateService: AffiliateService,
   ) {}
 
   /**
@@ -55,14 +58,13 @@ export class OrdersCronService {
       // Capture the buyers of the orders about to auto-complete BEFORE the bulk
       // update, so we can run the referral cumulative-spend check for each of
       // them afterwards (they will then be counted in the Completed aggregate).
+      // Fetch full docs (not just buyerId) so affiliate processing can read
+      // each order's items[] after the bulk completion below.
       const qualifying = await this.orderModel
-        .find(
-          {
-            status: OrderStatus.Delivered,
-            'trackingInfo.deliveredAt': { $lte: cutoffDate },
-          },
-          { buyerId: 1 },
-        )
+        .find({
+          status: OrderStatus.Delivered,
+          'trackingInfo.deliveredAt': { $lte: cutoffDate },
+        })
         .exec();
 
       // Find and update all qualifying orders in one bulk operation
@@ -105,6 +107,13 @@ export class OrdersCronService {
         );
         for (const buyerId of distinctBuyers) {
           await this.referralsService.recordCompletedOrder(buyerId);
+        }
+
+        // Affiliate: create held commissions for each auto-completed order.
+        // Each call is self-contained (never throws) so it cannot break the
+        // cron; processOrderCompletion is idempotent per order+listing.
+        for (const order of qualifying) {
+          await this.affiliateService.processOrderCompletion(order);
         }
       }
     } catch (error) {

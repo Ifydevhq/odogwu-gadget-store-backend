@@ -18,6 +18,7 @@ import {
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Min,
@@ -123,6 +124,19 @@ export class CreateOrderDto {
   @IsNumber()
   @Min(0)
   walletCreditAmount?: number;
+
+  // ─── Affiliate attribution ───────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Optional map of listingId -> affiliate code. When a code resolves to a ' +
+      'valid affiliate (not the buyer) and the listing has affiliate enabled, ' +
+      'the commission is snapshotted onto the order item. Invalid entries are ' +
+      'silently ignored and never block checkout.',
+    example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+  })
+  @IsObject()
+  @IsOptional()
+  affiliateCodes?: Record<string, string>;
 }
 
 // ═══════════════════════════════════════════════════════════════

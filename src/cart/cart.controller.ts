@@ -143,6 +143,7 @@ export class CartController {
       dto.paymentMethod,
       dto.applyWalletCredit,
       dto.walletCreditAmount,
+      dto.affiliateCodes,
     );
   }
 }

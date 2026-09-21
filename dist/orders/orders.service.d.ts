@@ -10,6 +10,7 @@ import { AlertsService } from '../alerts/alerts.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 export declare class OrdersService {
     private orderModel;
     private listingsService;
@@ -20,7 +21,8 @@ export declare class OrdersService {
     private walletService;
     private platformSettingsService;
     private referralsService;
-    constructor(orderModel: Model<OrderDocument>, listingsService: ListingsService, storesService: StoresService, creatorsService: CreatorsService, notificationsService: NotificationsService, alertsService: AlertsService, walletService: WalletService, platformSettingsService: PlatformSettingsService, referralsService: ReferralsService);
+    private affiliateService;
+    constructor(orderModel: Model<OrderDocument>, listingsService: ListingsService, storesService: StoresService, creatorsService: CreatorsService, notificationsService: NotificationsService, alertsService: AlertsService, walletService: WalletService, platformSettingsService: PlatformSettingsService, referralsService: ReferralsService, affiliateService: AffiliateService);
     private readonly logger;
     computeCreditPlan(buyerId: string, payableKobo: number, capKobo?: number): Promise<{
         promo: number;
@@ -54,11 +56,11 @@ export declare class OrdersService {
     } | {
         mode: 'immediate';
         capKobo?: number;
-    }): Promise<OrderDocument>;
+    }, affiliateCodes?: Record<string, string>): Promise<OrderDocument>;
     createPayOnDeliveryOrder(buyerId: string, items: Parameters<OrdersService['createCartOrder']>[1], shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number, walletCredit?: {
         apply: boolean;
         capKobo?: number;
-    }): Promise<OrderDocument>;
+    }, affiliateCodes?: Record<string, string>): Promise<OrderDocument>;
     private dispatchPaymentReceipt;
     private dispatchPayOnDeliveryNotifications;
     confirmPayment(orderId: string, paymentReference: string, paystackReference: string, method?: string): Promise<OrderDocument>;

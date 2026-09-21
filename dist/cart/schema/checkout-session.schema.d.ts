@@ -28,6 +28,7 @@ export declare class CheckoutSession {
     items: SessionItem[];
     shippingAddress: SessionShippingAddress;
     buyerNote?: string;
+    affiliateCodes?: Record<string, string>;
     grandTotal: number;
     deliveryFee: number;
     currency: string;

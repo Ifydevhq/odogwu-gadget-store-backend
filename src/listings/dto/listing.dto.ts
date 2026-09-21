@@ -29,6 +29,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -198,6 +199,30 @@ export class CreateListingDto {
   @IsString()
   @IsOptional()
   whatsappNumber?: string;
+
+  // ─── Affiliate Program ───────────────────────────────────
+
+  @ApiPropertyOptional({
+    example: true,
+    default: false,
+    description: 'Enable the affiliate program for this product',
+  })
+  @IsBoolean()
+  @IsOptional()
+  affiliateEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    example: 10,
+    default: 0,
+    description:
+      'Affiliate commission percentage (0-100). Falls back to the platform ' +
+      'default when 0.',
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  affiliateCommissionPercent?: number;
 }
 
 // ═══════════════════════════════════════════════════════════════

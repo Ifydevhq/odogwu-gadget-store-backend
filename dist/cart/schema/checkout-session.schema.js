@@ -68,6 +68,10 @@ __decorate([
     __metadata("design:type", String)
 ], CheckoutSession.prototype, "buyerNote", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: Object, default: null }),
+    __metadata("design:type", Object)
+], CheckoutSession.prototype, "affiliateCodes", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: Number, required: true }),
     __metadata("design:type", Number)
 ], CheckoutSession.prototype, "grandTotal", void 0);

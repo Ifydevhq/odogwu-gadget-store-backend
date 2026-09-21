@@ -62,6 +62,7 @@ import {
 } from '../wallet/schemas/wallet-transaction.schema';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 import { ReferralsService } from '../referrals/referrals.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 
 @Injectable()
 export class OrdersService {
@@ -77,6 +78,9 @@ export class OrdersService {
     // @Global ReferralsModule — injected directly (no OrdersModule import of
     // ReferralsModule) to avoid a circular module dependency.
     private referralsService: ReferralsService,
+    // @Global AffiliateModule — injected directly (same pattern as referrals)
+    // to avoid an OrdersModule <-> AffiliateModule cycle.
+    private affiliateService: AffiliateService,
   ) {}
 
   private readonly logger = new Logger(OrdersService.name);
@@ -550,6 +554,29 @@ export class OrdersService {
 
     const split = this.calculateRevenueSplit(listing, quantity);
 
+    // ─── Affiliate attribution (optional, never blocks checkout) ──
+    let affiliateSnapshot: Record<string, any> = {};
+    if (createOrderDto.affiliateCodes) {
+      try {
+        const attributions = await this.affiliateService.resolveAttributions(
+          buyerId,
+          [
+            {
+              listingId: listing._id.toString(),
+              totalPrice: split.totalAmount,
+            },
+          ],
+          createOrderDto.affiliateCodes,
+        );
+        const attr = attributions.get(listing._id.toString());
+        if (attr) affiliateSnapshot = { ...attr };
+      } catch (err) {
+        this.logger.warn(
+          `Affiliate attribution skipped for listing ${listing._id}: ${err?.message}`,
+        );
+      }
+    }
+
     // ─── Create order ──────────────────────────────────────
 
     const order = new this.orderModel({
@@ -567,6 +594,7 @@ export class OrdersService {
           totalPrice: split.totalAmount,
           type: listing.type,
           image: listing.media?.[0]?.url || null,
+          ...affiliateSnapshot,
         },
       ],
       subtotal: split.totalAmount,
@@ -674,8 +702,29 @@ export class OrdersService {
     walletCredit?:
       | { mode: 'reserve'; promo: number; earned: number }
       | { mode: 'immediate'; capKobo?: number },
+    affiliateCodes?: Record<string, string>,
   ): Promise<OrderDocument> {
     const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
+
+    // ─── Affiliate attribution (optional, never blocks checkout) ──
+    // Resolve each item's code to a commission snapshot keyed by listingId.
+    let affiliateByListing = new Map<string, any>();
+    if (affiliateCodes) {
+      try {
+        affiliateByListing = await this.affiliateService.resolveAttributions(
+          buyerId,
+          items.map((i) => ({
+            listingId: i.listingId,
+            totalPrice: i.totalPrice,
+          })),
+          affiliateCodes,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Affiliate attribution skipped for cart order: ${err?.message}`,
+        );
+      }
+    }
 
     // Calculate combined revenue split for the order
     let totalPlatformFee = 0;
@@ -726,6 +775,8 @@ export class OrdersService {
         sellerId: new Types.ObjectId(i.sellerId),
         creatorId: new Types.ObjectId(i.creatorId),
         commissionRate: i.commissionRate,
+        // Affiliate snapshot (spread only when the code resolved).
+        ...(affiliateByListing.get(String(i.listingId)) || {}),
       })),
       subtotal,
       shippingFee: deliveryFee,
@@ -802,6 +853,7 @@ export class OrdersService {
     receiptEmail?: string,
     deliveryFee: number = 0,
     walletCredit?: { apply: boolean; capKobo?: number },
+    affiliateCodes?: Record<string, string>,
   ): Promise<OrderDocument> {
     const order = await this.createCartOrder(
       buyerId,
@@ -814,6 +866,7 @@ export class OrdersService {
       walletCredit?.apply
         ? { mode: 'immediate', capKobo: walletCredit.capKobo }
         : undefined,
+      affiliateCodes,
     );
 
     // Stays PENDING, not Confirmed. Nothing has been paid and nobody has
@@ -1429,12 +1482,21 @@ export class OrdersService {
       status === OrderStatus.Cancelled ||
       status === OrderStatus.Refunded
     ) {
-      await this.reverseOrderCredit(
-        savedOrder,
+      const reversalReason =
         status === OrderStatus.Refunded
           ? `Order ${savedOrder.orderNumber} refunded`
-          : `Order ${savedOrder.orderNumber} cancelled`,
-      );
+          : `Order ${savedOrder.orderNumber} cancelled`;
+      await this.reverseOrderCredit(savedOrder, reversalReason);
+
+      // ─── Affiliate: reverse/cancel this order's commissions ──
+      // Fire-and-forget + self-contained — never breaks the status change.
+      this.affiliateService
+        .reverseForOrder(savedOrder._id.toString(), reversalReason)
+        .catch((err) =>
+          this.logger.error(
+            `affiliate reverseForOrder failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
     }
 
     // ─── Referral: check the buyer's cumulative spend on completion ─
@@ -1450,6 +1512,16 @@ export class OrdersService {
         .catch((err) =>
           this.logger.error(
             `recordCompletedOrder failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
+
+      // ─── Affiliate: create held commissions for attributed items ──
+      // Fire-and-forget + self-contained — never breaks order completion.
+      this.affiliateService
+        .processOrderCompletion(savedOrder)
+        .catch((err) =>
+          this.logger.error(
+            `affiliate processOrderCompletion failed for ${savedOrder.orderNumber}: ${err?.message}`,
           ),
         );
     }

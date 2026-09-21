@@ -24,4 +24,5 @@ export declare class CheckoutCartDto {
     paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery';
     applyWalletCredit?: boolean;
     walletCreditAmount?: number;
+    affiliateCodes?: Record<string, string>;
 }

@@ -29,8 +29,9 @@ const wallet_service_1 = require("../wallet/wallet.service");
 const wallet_transaction_schema_1 = require("../wallet/schemas/wallet-transaction.schema");
 const platform_settings_service_1 = require("../platform-settings/platform-settings.service");
 const referrals_service_1 = require("../referrals/referrals.service");
+const affiliate_service_1 = require("../affiliate/affiliate.service");
 let OrdersService = OrdersService_1 = class OrdersService {
-    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService, walletService, platformSettingsService, referralsService) {
+    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService, walletService, platformSettingsService, referralsService, affiliateService) {
         this.orderModel = orderModel;
         this.listingsService = listingsService;
         this.storesService = storesService;
@@ -40,6 +41,7 @@ let OrdersService = OrdersService_1 = class OrdersService {
         this.walletService = walletService;
         this.platformSettingsService = platformSettingsService;
         this.referralsService = referralsService;
+        this.affiliateService = affiliateService;
         this.logger = new common_1.Logger(OrdersService_1.name);
     }
     async computeCreditPlan(buyerId, payableKobo, capKobo) {
@@ -305,6 +307,23 @@ let OrdersService = OrdersService_1 = class OrdersService {
             throw new common_1.BadRequestException(`Only ${listing.quantity} item(s) available`);
         }
         const split = this.calculateRevenueSplit(listing, quantity);
+        let affiliateSnapshot = {};
+        if (createOrderDto.affiliateCodes) {
+            try {
+                const attributions = await this.affiliateService.resolveAttributions(buyerId, [
+                    {
+                        listingId: listing._id.toString(),
+                        totalPrice: split.totalAmount,
+                    },
+                ], createOrderDto.affiliateCodes);
+                const attr = attributions.get(listing._id.toString());
+                if (attr)
+                    affiliateSnapshot = { ...attr };
+            }
+            catch (err) {
+                this.logger.warn(`Affiliate attribution skipped for listing ${listing._id}: ${err?.message}`);
+            }
+        }
         const order = new this.orderModel({
             orderNumber: this.generateOrderNumber(),
             buyerId: new mongoose_2.Types.ObjectId(buyerId),
@@ -320,6 +339,7 @@ let OrdersService = OrdersService_1 = class OrdersService {
                     totalPrice: split.totalAmount,
                     type: listing.type,
                     image: listing.media?.[0]?.url || null,
+                    ...affiliateSnapshot,
                 },
             ],
             subtotal: split.totalAmount,
@@ -364,8 +384,20 @@ let OrdersService = OrdersService_1 = class OrdersService {
         }
         return saved;
     }
-    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, notifyBuyer = true, walletCredit) {
+    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, notifyBuyer = true, walletCredit, affiliateCodes) {
         const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
+        let affiliateByListing = new Map();
+        if (affiliateCodes) {
+            try {
+                affiliateByListing = await this.affiliateService.resolveAttributions(buyerId, items.map((i) => ({
+                    listingId: i.listingId,
+                    totalPrice: i.totalPrice,
+                })), affiliateCodes);
+            }
+            catch (err) {
+                this.logger.warn(`Affiliate attribution skipped for cart order: ${err?.message}`);
+            }
+        }
         let totalPlatformFee = 0;
         let totalSellerPayout = 0;
         for (const item of items) {
@@ -404,6 +436,7 @@ let OrdersService = OrdersService_1 = class OrdersService {
                 sellerId: new mongoose_2.Types.ObjectId(i.sellerId),
                 creatorId: new mongoose_2.Types.ObjectId(i.creatorId),
                 commissionRate: i.commissionRate,
+                ...(affiliateByListing.get(String(i.listingId)) || {}),
             })),
             subtotal,
             shippingFee: deliveryFee,
@@ -441,10 +474,10 @@ let OrdersService = OrdersService_1 = class OrdersService {
         await this.notifyOrderCreated(saved, { notifyBuyer });
         return saved;
     }
-    async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, walletCredit) {
+    async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, walletCredit, affiliateCodes) {
         const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee, false, walletCredit?.apply
             ? { mode: 'immediate', capKobo: walletCredit.capKobo }
-            : undefined);
+            : undefined, affiliateCodes);
         order.status = contants_1.OrderStatus.Pending;
         order.paymentStatus = contants_1.PaymentStatus.Pending;
         order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
@@ -832,14 +865,21 @@ let OrdersService = OrdersService_1 = class OrdersService {
         const savedOrder = await order.save();
         if (status === contants_1.OrderStatus.Cancelled ||
             status === contants_1.OrderStatus.Refunded) {
-            await this.reverseOrderCredit(savedOrder, status === contants_1.OrderStatus.Refunded
+            const reversalReason = status === contants_1.OrderStatus.Refunded
                 ? `Order ${savedOrder.orderNumber} refunded`
-                : `Order ${savedOrder.orderNumber} cancelled`);
+                : `Order ${savedOrder.orderNumber} cancelled`;
+            await this.reverseOrderCredit(savedOrder, reversalReason);
+            this.affiliateService
+                .reverseForOrder(savedOrder._id.toString(), reversalReason)
+                .catch((err) => this.logger.error(`affiliate reverseForOrder failed for ${savedOrder.orderNumber}: ${err?.message}`));
         }
         if (status === contants_1.OrderStatus.Completed) {
             this.referralsService
                 .recordCompletedOrder(savedOrder.buyerId.toString(), savedOrder.totalAmount)
                 .catch((err) => this.logger.error(`recordCompletedOrder failed for ${savedOrder.orderNumber}: ${err?.message}`));
+            this.affiliateService
+                .processOrderCompletion(savedOrder)
+                .catch((err) => this.logger.error(`affiliate processOrderCompletion failed for ${savedOrder.orderNumber}: ${err?.message}`));
         }
         const populatedOrder = await this.orderModel
             .findById(order._id)
@@ -1102,6 +1142,7 @@ exports.OrdersService = OrdersService = OrdersService_1 = __decorate([
         alerts_service_1.AlertsService,
         wallet_service_1.WalletService,
         platform_settings_service_1.PlatformSettingsService,
-        referrals_service_1.ReferralsService])
+        referrals_service_1.ReferralsService,
+        affiliate_service_1.AffiliateService])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

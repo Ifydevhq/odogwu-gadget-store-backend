@@ -16,6 +16,7 @@ export declare class CreateOrderDto {
     buyerNote?: string;
     applyWalletCredit?: boolean;
     walletCreditAmount?: number;
+    affiliateCodes?: Record<string, string>;
 }
 export declare class UpdateOrderStatusDto {
     status?: OrderStatus;

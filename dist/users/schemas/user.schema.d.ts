@@ -27,6 +27,7 @@ export declare class User extends BaseSchema {
     phoneVerifiedAt?: Date;
     referralCode?: string;
     referredBy?: Types.ObjectId;
+    isAffiliate: boolean;
     gender?: string;
     dateOfBirth?: string;
     country?: string;

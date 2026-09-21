@@ -163,6 +163,13 @@ export class User extends BaseSchema {
   @Prop({ type: Types.ObjectId, ref: 'User', default: null, index: true })
   referredBy?: Types.ObjectId;
 
+  // ─── Affiliate Program ───────────────────────────────────
+  // Opt-in flag. An affiliate can share per-product affiliate links (using the
+  // same `referralCode` above) and earn commission on referred purchases.
+
+  @Prop({ type: Boolean, default: false })
+  isAffiliate: boolean;
+
   // ─── Personal Details ────────────────────────────────────
 
   @Prop({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] })

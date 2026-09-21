@@ -8,6 +8,7 @@ import {
   IsArray,
   IsIn,
   IsBoolean,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -141,4 +142,15 @@ export class CheckoutCartDto {
   @IsNumber()
   @Min(0)
   walletCreditAmount?: number;
+
+  // ─── Affiliate attribution ───────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Optional map of listingId -> affiliate code. Resolved per item at ' +
+      'order build time; invalid entries are ignored and never block checkout.',
+    example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+  })
+  @IsOptional()
+  @IsObject()
+  affiliateCodes?: Record<string, string>;
 }
