@@ -270,8 +270,10 @@ export class UsersService {
             isPhoneVerified: true,
             phoneE164,
             phoneVerifiedAt: new Date(),
-            'mobile.phoneNumber': phoneE164,
-            'mobile.isoCode': 'NG',
+            // Set the whole `mobile` object rather than dotted sub-paths:
+            // `mobile` is null for most users, and Mongo cannot create
+            // `mobile.isoCode` inside a null (it throws "Cannot create field").
+            mobile: { phoneNumber: phoneE164, isoCode: 'NG' },
           },
         },
         { new: true, runValidators: true },
