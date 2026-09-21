@@ -338,6 +338,8 @@ export class AuthService {
       verificationCode: null,
       verificationExpires: null,
     });
+    // Reflect on the in-memory doc so the auth response below is accurate.
+    user.isEmailVerified = true;
 
     // Send welcome email
     this.notificationsService.sendWelcome(user.email, user.firstName);
@@ -352,7 +354,9 @@ export class AuthService {
       entityId: user._id,
     }).catch(() => {}); // non-blocking
 
-    return { message: 'Email verified successfully' };
+    // Verifying the email signs the user in: return a full auth response (token
+    // + user) so the client is authenticated immediately, exactly like login.
+    return this.buildAuthResponse(user);
   }
 
   /**
