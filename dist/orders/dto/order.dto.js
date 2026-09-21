@@ -98,6 +98,30 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], CreateOrderDto.prototype, "buyerNote", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Opt in to pay part of this order with wallet/store credit. When true, ' +
+            'the server applies the maximum redeemable credit (promo capped at the ' +
+            'platform %, earned uncapped) and reduces the amount charged to the ' +
+            'payment provider. Absent/false = no credit applied.',
+        example: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateOrderDto.prototype, "applyWalletCredit", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Optional cap (kobo) on how much wallet credit to apply. Presence of a ' +
+            'positive value also opts the order in. Never exceeds the redeemable ' +
+            'maximum or the order total.',
+        example: 50000,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CreateOrderDto.prototype, "walletCreditAmount", void 0);
 class UpdateOrderStatusDto {
 }
 exports.UpdateOrderStatusDto = UpdateOrderStatusDto;

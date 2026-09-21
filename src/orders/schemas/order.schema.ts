@@ -267,6 +267,31 @@ export class Order extends BaseSchema {
 
   @Prop({ type: String, default: null })
   cancellationReason?: string;
+
+  // ─── Wallet credit redemption (opt-in) ───────────────────
+  // How much store credit (kobo) was applied to reduce what the buyer
+  // pays to the provider / on delivery. 0 (default) means no credit used —
+  // byte-for-byte unchanged from the pre-wallet behaviour.
+
+  @Prop({ type: Number, default: 0 })
+  walletCreditApplied?: number;
+
+  // Split of the applied credit across buckets (kobo).
+  @Prop({
+    type: {
+      promo: { type: Number, default: 0 },
+      earned: { type: Number, default: 0 },
+    },
+    default: null,
+  })
+  walletCreditBreakdown?: { promo: number; earned: number };
+
+  // Primary wallet ledger row for the redemption debit (for tracking).
+  // Reversal reverses ALL purchase_redemption rows for this order via
+  // WalletService.reverseOrderRedemptions(), so it is robust to the
+  // two-bucket (promo + earned) case.
+  @Prop({ type: Types.ObjectId, default: null })
+  walletRedemptionTxnId?: Types.ObjectId;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

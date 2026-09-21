@@ -14,6 +14,7 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
@@ -97,6 +98,31 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   buyerNote?: string;
+
+  // ─── Wallet credit (opt-in) ──────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Opt in to pay part of this order with wallet/store credit. When true, ' +
+      'the server applies the maximum redeemable credit (promo capped at the ' +
+      'platform %, earned uncapped) and reduces the amount charged to the ' +
+      'payment provider. Absent/false = no credit applied.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  applyWalletCredit?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional cap (kobo) on how much wallet credit to apply. Presence of a ' +
+      'positive value also opts the order in. Never exceeds the redeemable ' +
+      'maximum or the order total.',
+    example: 50000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  walletCreditAmount?: number;
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -22,4 +22,6 @@ export declare class CheckoutCartDto {
     callbackUrl?: string;
     deliveryFee?: number;
     paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery';
+    applyWalletCredit?: boolean;
+    walletCreditAmount?: number;
 }

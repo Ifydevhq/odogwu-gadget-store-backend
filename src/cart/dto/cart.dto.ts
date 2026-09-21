@@ -7,6 +7,7 @@ import {
   IsString,
   IsArray,
   IsIn,
+  IsBoolean,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -115,4 +116,29 @@ export class CheckoutCartDto {
   @IsString()
   @IsIn(['paystack', 'opay', 'pay_on_delivery'])
   paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery';
+
+  // ─── Wallet credit (opt-in) ──────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Opt in to pay part of this checkout with wallet/store credit. When ' +
+      'true, the server applies the maximum redeemable credit and reduces the ' +
+      'amount charged to the provider (or collected on delivery). Absent/' +
+      'false = no credit applied (unchanged behaviour).',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  applyWalletCredit?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional cap (kobo) on wallet credit to apply. A positive value also ' +
+      'opts the checkout in. Never exceeds the redeemable maximum or the total.',
+    example: 50000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  walletCreditAmount?: number;
 }

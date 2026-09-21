@@ -52,6 +52,7 @@ import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { WalletModule } from './wallet/wallet.module';
+import { PhoneVerificationModule } from './phone-verification/phone-verification.module';
 
 @Module({
   imports: [
@@ -123,6 +124,7 @@ import { WalletModule } from './wallet/wallet.module';
     PushModule,
     AnnouncementsModule,
     WalletModule,
+    PhoneVerificationModule,
   ],
   controllers: [AppController],
 })

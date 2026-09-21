@@ -204,7 +204,7 @@ let CartService = CartService_1 = class CartService {
             issues,
         };
     }
-    async checkout(userId, email, shippingAddress, listingIds, buyerNote, callbackUrl, deliveryFee = 0, paymentMethod = 'paystack') {
+    async checkout(userId, email, shippingAddress, listingIds, buyerNote, callbackUrl, deliveryFee = 0, paymentMethod = 'paystack', applyWalletCredit = false, walletCreditAmount) {
         const cart = await this.cartModel
             .findOne({ userId: new mongoose_2.Types.ObjectId(userId) })
             .exec();
@@ -285,8 +285,11 @@ let CartService = CartService_1 = class CartService {
         }
         const itemsTotal = validItems.reduce((sum, i) => sum + i.totalPrice, 0);
         const grandTotal = itemsTotal + deliveryFee;
+        const wantsCredit = applyWalletCredit === true || (walletCreditAmount ?? 0) > 0;
         if (paymentMethod === 'pay_on_delivery') {
-            const order = await this.ordersService.createPayOnDeliveryOrder(userId, validItems, shippingAddress, buyerNote, email, deliveryFee);
+            const order = await this.ordersService.createPayOnDeliveryOrder(userId, validItems, shippingAddress, buyerNote, email, deliveryFee, wantsCredit
+                ? { apply: true, capKobo: walletCreditAmount }
+                : undefined);
             await this.removeCheckedOutItems(userId, validItems.map((i) => i.listingId));
             this.logger.log(`Pay-on-delivery order created: ${order.orderNumber} ` +
                 `(${validItems.length} items, total ${grandTotal})`);
@@ -300,6 +303,41 @@ let CartService = CartService_1 = class CartService {
                     itemCount: order.items.length,
                 },
                 grandTotal,
+                walletCreditApplied: order.walletCreditApplied || 0,
+                amountDue: order.totalAmount,
+                itemCount: validItems.length,
+                skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
+            };
+        }
+        let creditPlan = { promo: 0, earned: 0, total: 0 };
+        if (wantsCredit) {
+            try {
+                creditPlan = await this.ordersService.computeCreditPlan(userId, grandTotal, walletCreditAmount);
+            }
+            catch (err) {
+                this.logger.warn(`Wallet credit preview failed for user ${userId}: ${err?.message}`);
+                creditPlan = { promo: 0, earned: 0, total: 0 };
+            }
+        }
+        const amountToCharge = grandTotal - creditPlan.total;
+        if (wantsCredit && creditPlan.total > 0 && amountToCharge <= 0) {
+            const order = await this.ordersService.createCartOrder(userId, validItems, shippingAddress, buyerNote, email, deliveryFee, true, { mode: 'reserve', promo: creditPlan.promo, earned: creditPlan.earned });
+            await this.ordersService.confirmPayment(order._id.toString(), `WALLET-${order._id}`, `WALLET-${order._id}`, 'wallet_credit');
+            await this.removeCheckedOutItems(userId, validItems.map((i) => i.listingId));
+            this.logger.log(`Wallet-funded checkout order created: ${order.orderNumber} ` +
+                `(fully covered by ${creditPlan.total} kobo credit)`);
+            return {
+                paymentMethod: 'wallet_credit',
+                walletFunded: true,
+                order: {
+                    _id: order._id,
+                    orderNumber: order.orderNumber,
+                    totalAmount: order.totalAmount,
+                    itemCount: order.items.length,
+                },
+                grandTotal,
+                walletCreditApplied: creditPlan.total,
+                amountDue: 0,
                 itemCount: validItems.length,
                 skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
             };
@@ -310,25 +348,29 @@ let CartService = CartService_1 = class CartService {
             unitPrice: i.unitPrice,
         }));
         const payment = paymentMethod === 'opay'
-            ? await this.paymentsService.initializeOPayCheckoutSessionPayment(grandTotal, email, itemsSummary, shippingAddress, callbackUrl)
-            : await this.paymentsService.initializeCheckoutSessionPayment(grandTotal, email, itemsSummary, shippingAddress, callbackUrl);
+            ? await this.paymentsService.initializeOPayCheckoutSessionPayment(amountToCharge, email, itemsSummary, shippingAddress, callbackUrl)
+            : await this.paymentsService.initializeCheckoutSessionPayment(amountToCharge, email, itemsSummary, shippingAddress, callbackUrl);
         const session = await this.checkoutSessionModel.create({
             buyerId: new mongoose_2.Types.ObjectId(userId),
             email,
             items: validItems,
             shippingAddress,
             buyerNote,
-            grandTotal,
+            grandTotal: amountToCharge,
             deliveryFee,
             currency: 'NGN',
             paymentMethod,
             paymentReference: payment.reference,
             status: 'pending',
+            walletCreditApplied: creditPlan.total,
+            walletCreditBreakdown: creditPlan.total > 0
+                ? { promo: creditPlan.promo, earned: creditPlan.earned }
+                : null,
             expiresAt: new Date(Date.now() + 30 * 60 * 1000),
         });
         this.logger.log(`Checkout session created: ${session._id}, ` +
             `user ${userId}, ${validItems.length} items, ${skippedItems.length} skipped, ` +
-            `total ${grandTotal}, ref ${payment.reference}`);
+            `charge ${amountToCharge} (credit ${creditPlan.total}), ref ${payment.reference}`);
         return {
             sessionId: session._id,
             paymentMethod,
@@ -336,8 +378,9 @@ let CartService = CartService_1 = class CartService {
                 authorizationUrl: payment.authorizationUrl,
                 accessCode: payment.accessCode,
                 reference: payment.reference,
-                grandTotal,
+                grandTotal: amountToCharge,
             },
+            walletCreditApplied: creditPlan.total,
             itemCount: validItems.length,
             skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
         };
@@ -356,7 +399,15 @@ let CartService = CartService_1 = class CartService {
             this.logger.warn(`Checkout session in unexpected state: ${session.status}`);
             throw new common_1.BadRequestException(`Checkout session is ${session.status}`);
         }
-        const order = await this.ordersService.createCartOrder(session.buyerId.toString(), session.items, session.shippingAddress, session.buyerNote, session.email, session.deliveryFee || 0);
+        const sessionCredit = session.walletCreditApplied || 0;
+        const sessionBreakdown = session.walletCreditBreakdown;
+        const order = await this.ordersService.createCartOrder(session.buyerId.toString(), session.items, session.shippingAddress, session.buyerNote, session.email, session.deliveryFee || 0, true, sessionCredit > 0 && sessionBreakdown
+            ? {
+                mode: 'reserve',
+                promo: sessionBreakdown.promo || 0,
+                earned: sessionBreakdown.earned || 0,
+            }
+            : undefined);
         await this.ordersService.confirmPayment(order._id.toString(), paymentReference, paystackReference);
         const paidListingIds = session.items.map((i) => i.listingId);
         await this.removeCheckedOutItems(session.buyerId.toString(), paidListingIds);

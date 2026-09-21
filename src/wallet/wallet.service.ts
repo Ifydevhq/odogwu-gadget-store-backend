@@ -354,6 +354,36 @@ export class WalletService {
     return reversalRow;
   }
 
+  /**
+   * Reverse EVERY purchase_redemption debit recorded for an order. Used when
+   * an order that consumed wallet credit does not complete (cancelled /
+   * refunded / payment failure). Fully idempotent: rows already reversed are
+   * skipped, so calling this twice is safe and reversing across one or two
+   * buckets (promo + earned) is handled uniformly.
+   *
+   * Returns the number of ledger rows reversed on this call.
+   */
+  async reverseOrderRedemptions(
+    orderId: string | Types.ObjectId,
+    reason: string,
+  ): Promise<number> {
+    const rows = await this.txnModel
+      .find({
+        orderId: new Types.ObjectId(String(orderId)),
+        type: WalletTxnType.PurchaseRedemption,
+        direction: WalletTxnDirection.Debit,
+        status: WalletTxnStatus.Spent, // not already reversed
+      })
+      .exec();
+
+    let reversed = 0;
+    for (const row of rows) {
+      await this.reverse(row._id, reason);
+      reversed += 1;
+    }
+    return reversed;
+  }
+
   // ═══════════════════════════════════════════════════════════════════
   // COMPUTE REDEEMABLE (pure — no writes)
   // ═══════════════════════════════════════════════════════════════════

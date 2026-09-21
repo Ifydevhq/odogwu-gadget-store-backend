@@ -45,7 +45,7 @@ let CartController = class CartController {
         return this.cartService.validateCart(req.user.sub);
     }
     async checkout(req, dto) {
-        return this.cartService.checkout(req.user.sub, dto.email || req.user.email, dto.shippingAddress, dto.listingIds, dto.buyerNote, dto.callbackUrl, dto.deliveryFee, dto.paymentMethod);
+        return this.cartService.checkout(req.user.sub, dto.email || req.user.email, dto.shippingAddress, dto.listingIds, dto.buyerNote, dto.callbackUrl, dto.deliveryFee, dto.paymentMethod, dto.applyWalletCredit, dto.walletCreditAmount);
     }
 };
 exports.CartController = CartController;

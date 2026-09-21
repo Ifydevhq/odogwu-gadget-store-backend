@@ -181,6 +181,65 @@ export class UsersService {
     return this.userModel.countDocuments(filter).exec();
   }
 
+  // ─── Phone Verification ─────────────────────────────────
+
+  /**
+   * Find a user who has ALREADY verified this exact E.164 phone number.
+   * Used to enforce "one verified account per phone". Returns null if the
+   * phone is not verified against any account yet.
+   */
+  async findVerifiedByPhoneE164(
+    phoneE164: string,
+  ): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne({ phoneE164, isPhoneVerified: true })
+      .exec();
+  }
+
+  /**
+   * Mark a user's phone as verified: sets isPhoneVerified/phoneE164/
+   * phoneVerifiedAt and mirrors the number onto the legacy `mobile` field.
+   */
+  async setPhoneVerified(
+    userId: string,
+    phoneE164: string,
+  ): Promise<UserDocument> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            isPhoneVerified: true,
+            phoneE164,
+            phoneVerifiedAt: new Date(),
+            'mobile.phoneNumber': phoneE164,
+            'mobile.isoCode': 'NG',
+          },
+        },
+        { new: true, runValidators: true },
+      )
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  /**
+   * Reward-eligibility gate. A user can only earn phone-keyed rewards
+   * (welcome credit today, referral rewards in a later phase) once they have
+   * verified their phone number.
+   */
+  async isRewardEligible(userId: string): Promise<boolean> {
+    const user = await this.userModel
+      .findById(userId)
+      .select('isPhoneVerified')
+      .exec();
+    return user?.isPhoneVerified === true;
+  }
+
   // ─── Account Settings ───────────────────────────────────
 
   /**

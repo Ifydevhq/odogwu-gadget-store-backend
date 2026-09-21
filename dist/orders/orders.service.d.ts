@@ -7,6 +7,8 @@ import { PaginatedResponse } from '@common/interfaces/paginated-response.interfa
 import { NotificationsService } from '../notifications/notifications.service';
 import { ListingsService } from 'src/listings/listings.service';
 import { AlertsService } from '../alerts/alerts.service';
+import { WalletService } from '../wallet/wallet.service';
+import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
 export declare class OrdersService {
     private orderModel;
     private listingsService;
@@ -14,7 +16,19 @@ export declare class OrdersService {
     private creatorsService;
     private notificationsService;
     private alertsService;
-    constructor(orderModel: Model<OrderDocument>, listingsService: ListingsService, storesService: StoresService, creatorsService: CreatorsService, notificationsService: NotificationsService, alertsService: AlertsService);
+    private walletService;
+    private platformSettingsService;
+    constructor(orderModel: Model<OrderDocument>, listingsService: ListingsService, storesService: StoresService, creatorsService: CreatorsService, notificationsService: NotificationsService, alertsService: AlertsService, walletService: WalletService, platformSettingsService: PlatformSettingsService);
+    private readonly logger;
+    computeCreditPlan(buyerId: string, payableKobo: number, capKobo?: number): Promise<{
+        promo: number;
+        earned: number;
+        total: number;
+    }>;
+    private reserveCreditOnOrder;
+    private applyCreditImmediate;
+    private settleReservedCredit;
+    private reverseOrderCredit;
     private generateOrderNumber;
     private calculateRevenueSplit;
     private notifyOrderCreated;
@@ -31,11 +45,21 @@ export declare class OrdersService {
         type: string;
         image: string | null;
         commissionRate: number;
-    }>, shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number, notifyBuyer?: boolean): Promise<OrderDocument>;
-    createPayOnDeliveryOrder(buyerId: string, items: Parameters<OrdersService['createCartOrder']>[1], shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number): Promise<OrderDocument>;
+    }>, shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number, notifyBuyer?: boolean, walletCredit?: {
+        mode: 'reserve';
+        promo: number;
+        earned: number;
+    } | {
+        mode: 'immediate';
+        capKobo?: number;
+    }): Promise<OrderDocument>;
+    createPayOnDeliveryOrder(buyerId: string, items: Parameters<OrdersService['createCartOrder']>[1], shippingAddress: any, buyerNote?: string, receiptEmail?: string, deliveryFee?: number, walletCredit?: {
+        apply: boolean;
+        capKobo?: number;
+    }): Promise<OrderDocument>;
     private dispatchPaymentReceipt;
     private dispatchPayOnDeliveryNotifications;
-    confirmPayment(orderId: string, paymentReference: string, paystackReference: string): Promise<OrderDocument>;
+    confirmPayment(orderId: string, paymentReference: string, paystackReference: string, method?: string): Promise<OrderDocument>;
     findByPaymentReference(reference: string): Promise<OrderDocument>;
     findByIdInternal(orderId: string): Promise<OrderDocument>;
     findById(orderId: string, userId: string): Promise<OrderDocument>;

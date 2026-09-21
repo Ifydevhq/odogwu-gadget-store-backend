@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var OrdersService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrdersService = void 0;
 const common_1 = require("@nestjs/common");
@@ -24,14 +25,182 @@ const notifications_service_1 = require("../notifications/notifications.service"
 const listings_service_1 = require("../listings/listings.service");
 const alerts_service_1 = require("../alerts/alerts.service");
 const contants_2 = require("../config/contants");
-let OrdersService = class OrdersService {
-    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService) {
+const wallet_service_1 = require("../wallet/wallet.service");
+const wallet_transaction_schema_1 = require("../wallet/schemas/wallet-transaction.schema");
+const platform_settings_service_1 = require("../platform-settings/platform-settings.service");
+let OrdersService = OrdersService_1 = class OrdersService {
+    constructor(orderModel, listingsService, storesService, creatorsService, notificationsService, alertsService, walletService, platformSettingsService) {
         this.orderModel = orderModel;
         this.listingsService = listingsService;
         this.storesService = storesService;
         this.creatorsService = creatorsService;
         this.notificationsService = notificationsService;
         this.alertsService = alertsService;
+        this.walletService = walletService;
+        this.platformSettingsService = platformSettingsService;
+        this.logger = new common_1.Logger(OrdersService_1.name);
+    }
+    async computeCreditPlan(buyerId, payableKobo, capKobo) {
+        if (!(payableKobo > 0))
+            return { promo: 0, earned: 0, total: 0 };
+        const settings = await this.platformSettingsService.getSettings();
+        const maxPromoPercent = settings?.creditMaxPercentPerOrder ?? 20;
+        let { promoApplied, earnedApplied } = await this.walletService.computeRedeemable(buyerId, payableKobo, maxPromoPercent);
+        if (capKobo != null && capKobo >= 0) {
+            const cap = Math.floor(capKobo);
+            let total = promoApplied + earnedApplied;
+            if (total > cap) {
+                const overflow = total - cap;
+                const cutEarned = Math.min(earnedApplied, overflow);
+                earnedApplied -= cutEarned;
+                const rem = overflow - cutEarned;
+                promoApplied -= Math.min(promoApplied, rem);
+            }
+        }
+        let promo = Math.max(0, Math.floor(promoApplied));
+        let earned = Math.max(0, Math.floor(earnedApplied));
+        if (promo + earned > payableKobo) {
+            const overflow = promo + earned - payableKobo;
+            const cutEarned = Math.min(earned, overflow);
+            earned -= cutEarned;
+            promo -= Math.min(promo, overflow - cutEarned);
+        }
+        return { promo, earned, total: promo + earned };
+    }
+    reserveCreditOnOrder(order, promo, earned) {
+        const total = Math.max(0, promo) + Math.max(0, earned);
+        if (total <= 0)
+            return;
+        if (total > order.totalAmount)
+            return;
+        order.walletCreditApplied = total;
+        order.walletCreditBreakdown = {
+            promo: Math.max(0, promo),
+            earned: Math.max(0, earned),
+        };
+        order.totalAmount = order.totalAmount - total;
+    }
+    async applyCreditImmediate(order, buyerId, capKobo) {
+        const plan = await this.computeCreditPlan(buyerId, order.totalAmount, capKobo);
+        if (plan.total <= 0)
+            return;
+        let debitedPromo = 0;
+        let debitedEarned = 0;
+        let firstTxnId;
+        if (plan.promo > 0) {
+            try {
+                const txn = await this.walletService.debit({
+                    userId: buyerId,
+                    amount: plan.promo,
+                    bucket: wallet_transaction_schema_1.WalletBucket.Promo,
+                    type: wallet_transaction_schema_1.WalletTxnType.PurchaseRedemption,
+                    description: `Wallet credit (promo) applied to order ${order.orderNumber}`,
+                    orderId: order._id,
+                    idempotencyKey: `redeem:${order._id}:promo`,
+                });
+                debitedPromo = txn.amount;
+                firstTxnId = txn._id;
+            }
+            catch (err) {
+                this.logger.warn(`COD promo debit failed for ${order.orderNumber}: ${err?.message}`);
+            }
+        }
+        if (plan.earned > 0) {
+            try {
+                const txn = await this.walletService.debit({
+                    userId: buyerId,
+                    amount: plan.earned,
+                    bucket: wallet_transaction_schema_1.WalletBucket.Earned,
+                    type: wallet_transaction_schema_1.WalletTxnType.PurchaseRedemption,
+                    description: `Wallet credit (earned) applied to order ${order.orderNumber}`,
+                    orderId: order._id,
+                    idempotencyKey: `redeem:${order._id}:earned`,
+                });
+                debitedEarned = txn.amount;
+                if (!firstTxnId)
+                    firstTxnId = txn._id;
+            }
+            catch (err) {
+                this.logger.warn(`COD earned debit failed for ${order.orderNumber}: ${err?.message}`);
+            }
+        }
+        const debitedTotal = debitedPromo + debitedEarned;
+        if (debitedTotal <= 0)
+            return;
+        order.walletCreditApplied = debitedTotal;
+        order.walletCreditBreakdown = { promo: debitedPromo, earned: debitedEarned };
+        if (firstTxnId)
+            order.walletRedemptionTxnId = firstTxnId;
+        order.totalAmount = order.totalAmount - debitedTotal;
+        await order.save();
+    }
+    async settleReservedCredit(order, buyerId) {
+        if (!(order.walletCreditApplied > 0))
+            return;
+        if (order.walletRedemptionTxnId)
+            return;
+        const breakdown = order.walletCreditBreakdown || { promo: 0, earned: 0 };
+        const balance = await this.walletService.getBalance(buyerId);
+        const promo = Math.min(Math.max(0, breakdown.promo || 0), balance.promoBalance);
+        const earned = Math.min(Math.max(0, breakdown.earned || 0), balance.earnedBalance);
+        let firstTxnId;
+        let debited = 0;
+        if (promo > 0) {
+            try {
+                const txn = await this.walletService.debit({
+                    userId: buyerId,
+                    amount: promo,
+                    bucket: wallet_transaction_schema_1.WalletBucket.Promo,
+                    type: wallet_transaction_schema_1.WalletTxnType.PurchaseRedemption,
+                    description: `Wallet credit (promo) applied to order ${order.orderNumber}`,
+                    orderId: order._id,
+                    idempotencyKey: `redeem:${order._id}:promo`,
+                });
+                firstTxnId = txn._id;
+                debited += txn.amount;
+            }
+            catch (err) {
+                this.logger.error(`Settle promo debit failed for ${order.orderNumber}: ${err?.message}`);
+            }
+        }
+        if (earned > 0) {
+            try {
+                const txn = await this.walletService.debit({
+                    userId: buyerId,
+                    amount: earned,
+                    bucket: wallet_transaction_schema_1.WalletBucket.Earned,
+                    type: wallet_transaction_schema_1.WalletTxnType.PurchaseRedemption,
+                    description: `Wallet credit (earned) applied to order ${order.orderNumber}`,
+                    orderId: order._id,
+                    idempotencyKey: `redeem:${order._id}:earned`,
+                });
+                if (!firstTxnId)
+                    firstTxnId = txn._id;
+                debited += txn.amount;
+            }
+            catch (err) {
+                this.logger.error(`Settle earned debit failed for ${order.orderNumber}: ${err?.message}`);
+            }
+        }
+        if (debited < order.walletCreditApplied) {
+            this.logger.error(`Wallet redemption shortfall on ${order.orderNumber}: reserved ` +
+                `${order.walletCreditApplied} but only debited ${debited} kobo ` +
+                `(balance dropped since reservation; platform absorbs the difference).`);
+        }
+        if (firstTxnId) {
+            order.walletRedemptionTxnId = firstTxnId;
+            await order.save();
+        }
+    }
+    async reverseOrderCredit(order, reason) {
+        if (!(order?.walletCreditApplied > 0))
+            return;
+        try {
+            await this.walletService.reverseOrderRedemptions(order._id.toString(), reason);
+        }
+        catch (err) {
+            this.logger.error(`Failed to reverse wallet credit for ${order.orderNumber}: ${err?.message}`);
+        }
     }
     generateOrderNumber() {
         const date = new Date();
@@ -118,7 +287,7 @@ let OrdersService = class OrdersService {
         }
     }
     async create(buyerId, createOrderDto) {
-        const { listingId, quantity, shippingAddress, buyerNote } = createOrderDto;
+        const { listingId, quantity, shippingAddress, buyerNote, applyWalletCredit, walletCreditAmount, } = createOrderDto;
         const listing = await this.listingsService.findById(listingId);
         if (listing.userId.toString() === buyerId) {
             throw new common_1.BadRequestException('You cannot purchase your own listing');
@@ -168,11 +337,32 @@ let OrdersService = class OrdersService {
             paymentStatus: contants_1.PaymentStatus.Pending,
             disbursementStatus: split.sellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
         });
-        const saved = await order.save();
+        let saved = await order.save();
+        const wantsCredit = applyWalletCredit === true || (walletCreditAmount ?? 0) > 0;
+        if (wantsCredit) {
+            try {
+                const plan = await this.computeCreditPlan(buyerId, saved.totalAmount, walletCreditAmount);
+                if (plan.total > 0) {
+                    this.reserveCreditOnOrder(saved, plan.promo, plan.earned);
+                    saved = await saved.save();
+                }
+            }
+            catch (err) {
+                this.logger.warn(`Wallet credit reservation skipped for ${saved.orderNumber}: ${err?.message}`);
+            }
+        }
         await this.notifyOrderCreated(saved);
+        if (saved.walletCreditApplied > 0 && saved.totalAmount <= 0) {
+            try {
+                saved = await this.confirmPayment(saved._id.toString(), `WALLET-${saved._id}`, `WALLET-${saved._id}`, 'wallet_credit');
+            }
+            catch (err) {
+                this.logger.error(`Auto-confirm of fully-credited order ${saved.orderNumber} failed: ${err?.message}`);
+            }
+        }
         return saved;
     }
-    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, notifyBuyer = true) {
+    async createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, notifyBuyer = true, walletCredit) {
         const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
         let totalPlatformFee = 0;
         let totalSellerPayout = 0;
@@ -231,12 +421,28 @@ let OrdersService = class OrdersService {
             paymentStatus: contants_1.PaymentStatus.Pending,
             disbursementStatus: totalSellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
         });
-        const saved = await order.save();
+        let saved = await order.save();
+        if (walletCredit) {
+            try {
+                if (walletCredit.mode === 'reserve') {
+                    this.reserveCreditOnOrder(saved, walletCredit.promo, walletCredit.earned);
+                    saved = await saved.save();
+                }
+                else {
+                    await this.applyCreditImmediate(saved, buyerId, walletCredit.capKobo);
+                }
+            }
+            catch (err) {
+                this.logger.warn(`Wallet credit application skipped for ${saved.orderNumber}: ${err?.message}`);
+            }
+        }
         await this.notifyOrderCreated(saved, { notifyBuyer });
         return saved;
     }
-    async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0) {
-        const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee, false);
+    async createPayOnDeliveryOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee = 0, walletCredit) {
+        const order = await this.createCartOrder(buyerId, items, shippingAddress, buyerNote, receiptEmail, deliveryFee, false, walletCredit?.apply
+            ? { mode: 'immediate', capKobo: walletCredit.capKobo }
+            : undefined);
         order.status = contants_1.OrderStatus.Pending;
         order.paymentStatus = contants_1.PaymentStatus.Pending;
         order.paymentInfo = { method: 'pay_on_delivery', status: 'pending' };
@@ -346,7 +552,7 @@ let OrdersService = class OrdersService {
         catch {
         }
     }
-    async confirmPayment(orderId, paymentReference, paystackReference) {
+    async confirmPayment(orderId, paymentReference, paystackReference, method = 'paystack') {
         const order = await this.orderModel.findById(orderId).exec();
         if (!order) {
             throw new common_1.NotFoundException('Order not found');
@@ -357,13 +563,14 @@ let OrdersService = class OrdersService {
         order.paymentStatus = contants_1.PaymentStatus.Success;
         order.status = contants_1.OrderStatus.Confirmed;
         order.paymentInfo = {
-            method: 'paystack',
+            method,
             reference: paymentReference,
             paystackReference,
             paidAt: new Date(),
             status: 'success',
         };
         const updatedOrder = await order.save();
+        await this.settleReservedCredit(updatedOrder, updatedOrder.buyerId.toString()).catch((err) => this.logger.error(`settleReservedCredit failed for ${updatedOrder.orderNumber}: ${err?.message}`));
         for (const _item of order.items) {
         }
         const processedStores = new Set();
@@ -621,6 +828,12 @@ let OrdersService = class OrdersService {
         if (cancellationReason)
             order.cancellationReason = cancellationReason;
         const savedOrder = await order.save();
+        if (status === contants_1.OrderStatus.Cancelled ||
+            status === contants_1.OrderStatus.Refunded) {
+            await this.reverseOrderCredit(savedOrder, status === contants_1.OrderStatus.Refunded
+                ? `Order ${savedOrder.orderNumber} refunded`
+                : `Order ${savedOrder.orderNumber} cancelled`);
+        }
         const populatedOrder = await this.orderModel
             .findById(order._id)
             .populate('buyerId', 'firstName email')
@@ -871,7 +1084,7 @@ let OrdersService = class OrdersService {
     }
 };
 exports.OrdersService = OrdersService;
-exports.OrdersService = OrdersService = __decorate([
+exports.OrdersService = OrdersService = OrdersService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, mongoose_1.InjectModel)(order_schema_1.Order.name)),
     __metadata("design:paramtypes", [mongoose_2.Model,
@@ -879,6 +1092,8 @@ exports.OrdersService = OrdersService = __decorate([
         stores_service_1.StoresService,
         creators_service_1.CreatorsService,
         notifications_service_1.NotificationsService,
-        alerts_service_1.AlertsService])
+        alerts_service_1.AlertsService,
+        wallet_service_1.WalletService,
+        platform_settings_service_1.PlatformSettingsService])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

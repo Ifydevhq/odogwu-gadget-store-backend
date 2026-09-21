@@ -80,6 +80,20 @@ __decorate([
     __metadata("design:type", String)
 ], CheckoutSession.prototype, "currency", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0 }),
+    __metadata("design:type", Number)
+], CheckoutSession.prototype, "walletCreditApplied", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            promo: { type: Number, default: 0 },
+            earned: { type: Number, default: 0 },
+        },
+        default: null,
+    }),
+    __metadata("design:type", Object)
+], CheckoutSession.prototype, "walletCreditBreakdown", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ type: String, enum: ['paystack', 'opay'], default: 'paystack' }),
     __metadata("design:type", String)
 ], CheckoutSession.prototype, "paymentMethod", void 0);

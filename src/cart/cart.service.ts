@@ -364,6 +364,8 @@ export class CartService {
     callbackUrl?: string,
     deliveryFee: number = 0,
     paymentMethod: 'paystack' | 'opay' | 'pay_on_delivery' = 'paystack',
+    applyWalletCredit: boolean = false,
+    walletCreditAmount?: number,
   ) {
     // 1. Get and validate cart
     const cart = await this.cartModel
@@ -473,6 +475,10 @@ export class CartService {
     const itemsTotal = validItems.reduce((sum, i) => sum + i.totalPrice, 0);
     const grandTotal = itemsTotal + deliveryFee;
 
+    // Opt-in wallet credit (default false → behaviour unchanged)
+    const wantsCredit =
+      applyWalletCredit === true || (walletCreditAmount ?? 0) > 0;
+
     // ─── Pay on Delivery — no online payment, create the order now ───
     if (paymentMethod === 'pay_on_delivery') {
       const order = await this.ordersService.createPayOnDeliveryOrder(
@@ -482,6 +488,9 @@ export class CartService {
         buyerNote,
         email,
         deliveryFee,
+        wantsCredit
+          ? { apply: true, capKobo: walletCreditAmount }
+          : undefined,
       );
 
       // Remove the checked-out items from the cart immediately.
@@ -501,16 +510,90 @@ export class CartService {
         order: {
           _id: order._id,
           orderNumber: order.orderNumber,
-          totalAmount: order.totalAmount,
+          totalAmount: order.totalAmount, // amount to collect on delivery (net of credit)
           itemCount: order.items.length,
         },
-        grandTotal,
+        grandTotal, // gross (before wallet credit)
+        walletCreditApplied: order.walletCreditApplied || 0,
+        amountDue: order.totalAmount,
         itemCount: validItems.length,
         skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
       };
     }
 
-    // 3. Initialize payment via chosen provider
+    // ─── Wallet credit (opt-in, ONLINE) ─────────────────────
+    // Compute the intended credit and reduce what the provider is charged.
+    // The wallet is NOT debited here — the debit happens in confirmPayment
+    // after the money lands, so an abandoned/failed session never touches the
+    // wallet. The intended split is stored on the session and applied at
+    // fulfilment.
+    let creditPlan = { promo: 0, earned: 0, total: 0 };
+    if (wantsCredit) {
+      try {
+        creditPlan = await this.ordersService.computeCreditPlan(
+          userId,
+          grandTotal,
+          walletCreditAmount,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Wallet credit preview failed for user ${userId}: ${err?.message}`,
+        );
+        creditPlan = { promo: 0, earned: 0, total: 0 };
+      }
+    }
+    const amountToCharge = grandTotal - creditPlan.total;
+
+    // ─── Fully covered by credit — no online payment needed ──
+    // Create the order now, apply the reserved credit, confirm it as
+    // wallet-funded, and clear the paid items from the cart.
+    if (wantsCredit && creditPlan.total > 0 && amountToCharge <= 0) {
+      const order = await this.ordersService.createCartOrder(
+        userId,
+        validItems,
+        shippingAddress,
+        buyerNote,
+        email,
+        deliveryFee,
+        true,
+        { mode: 'reserve', promo: creditPlan.promo, earned: creditPlan.earned },
+      );
+
+      await this.ordersService.confirmPayment(
+        order._id.toString(),
+        `WALLET-${order._id}`,
+        `WALLET-${order._id}`,
+        'wallet_credit',
+      );
+
+      await this.removeCheckedOutItems(
+        userId,
+        validItems.map((i) => i.listingId),
+      );
+
+      this.logger.log(
+        `Wallet-funded checkout order created: ${order.orderNumber} ` +
+          `(fully covered by ${creditPlan.total} kobo credit)`,
+      );
+
+      return {
+        paymentMethod: 'wallet_credit',
+        walletFunded: true,
+        order: {
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount, // 0 charged, fully credit-funded
+          itemCount: order.items.length,
+        },
+        grandTotal, // gross (before wallet credit)
+        walletCreditApplied: creditPlan.total,
+        amountDue: 0,
+        itemCount: validItems.length,
+        skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
+      };
+    }
+
+    // 3. Initialize payment via chosen provider (reduced amount)
     const itemsSummary = validItems.map((i) => ({
       itemName: i.itemName,
       quantity: i.quantity,
@@ -520,14 +603,14 @@ export class CartService {
     const payment =
       paymentMethod === 'opay'
         ? await this.paymentsService.initializeOPayCheckoutSessionPayment(
-            grandTotal,
+            amountToCharge,
             email,
             itemsSummary,
             shippingAddress,
             callbackUrl,
           )
         : await this.paymentsService.initializeCheckoutSessionPayment(
-            grandTotal,
+            amountToCharge,
             email,
             itemsSummary,
             shippingAddress,
@@ -541,19 +624,25 @@ export class CartService {
       items: validItems,
       shippingAddress,
       buyerNote,
-      grandTotal,
+      grandTotal: amountToCharge, // amount actually charged to the provider
       deliveryFee,
       currency: 'NGN',
       paymentMethod,
       paymentReference: payment.reference,
       status: 'pending',
+      // Intended wallet credit — debited at fulfilment, never before.
+      walletCreditApplied: creditPlan.total,
+      walletCreditBreakdown:
+        creditPlan.total > 0
+          ? { promo: creditPlan.promo, earned: creditPlan.earned }
+          : null,
       expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes
     });
 
     this.logger.log(
       `Checkout session created: ${session._id}, ` +
         `user ${userId}, ${validItems.length} items, ${skippedItems.length} skipped, ` +
-        `total ${grandTotal}, ref ${payment.reference}`,
+        `charge ${amountToCharge} (credit ${creditPlan.total}), ref ${payment.reference}`,
     );
 
     // 5. Return — cart is untouched, no orders yet
@@ -564,8 +653,9 @@ export class CartService {
         authorizationUrl: payment.authorizationUrl,
         accessCode: payment.accessCode,
         reference: payment.reference,
-        grandTotal,
+        grandTotal: amountToCharge,
       },
+      walletCreditApplied: creditPlan.total,
       itemCount: validItems.length,
       skippedItems: skippedItems.length > 0 ? skippedItems : undefined,
     };
@@ -603,7 +693,11 @@ export class CartService {
       throw new BadRequestException(`Checkout session is ${session.status}`);
     }
 
-    // 1. Create a single order with all items
+    // 1. Create a single order with all items. If the session carried an
+    //    intended wallet-credit split, reserve it on the order (reduces the
+    //    stored payable); the actual debit happens in confirmPayment below.
+    const sessionCredit = (session as any).walletCreditApplied || 0;
+    const sessionBreakdown = (session as any).walletCreditBreakdown;
     const order = await this.ordersService.createCartOrder(
       session.buyerId.toString(),
       session.items as any[],
@@ -611,9 +705,18 @@ export class CartService {
       session.buyerNote,
       session.email, // Receipt email (checkout override or user email)
       (session as any).deliveryFee || 0,
+      true,
+      sessionCredit > 0 && sessionBreakdown
+        ? {
+            mode: 'reserve',
+            promo: sessionBreakdown.promo || 0,
+            earned: sessionBreakdown.earned || 0,
+          }
+        : undefined,
     );
 
-    // Mark as paid immediately since payment is already confirmed
+    // Mark as paid immediately since payment is already confirmed.
+    // confirmPayment settles (debits) any reserved wallet credit.
     await this.ordersService.confirmPayment(
       order._id.toString(),
       paymentReference,

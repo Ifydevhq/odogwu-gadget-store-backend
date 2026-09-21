@@ -31,6 +31,11 @@ export declare class CheckoutSession {
     grandTotal: number;
     deliveryFee: number;
     currency: string;
+    walletCreditApplied: number;
+    walletCreditBreakdown?: {
+        promo: number;
+        earned: number;
+    };
     paymentMethod: string;
     paymentReference: string;
     status: string;

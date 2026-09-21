@@ -22,6 +22,9 @@ export declare class User extends BaseSchema {
     authProvider: AuthProvider;
     isEmailVerified: boolean;
     isSuspended: boolean;
+    isPhoneVerified: boolean;
+    phoneE164?: string;
+    phoneVerifiedAt?: Date;
     gender?: string;
     dateOfBirth?: string;
     country?: string;

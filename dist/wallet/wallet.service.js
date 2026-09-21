@@ -211,6 +211,22 @@ let WalletService = WalletService_1 = class WalletService {
         });
         return reversalRow;
     }
+    async reverseOrderRedemptions(orderId, reason) {
+        const rows = await this.txnModel
+            .find({
+            orderId: new mongoose_2.Types.ObjectId(String(orderId)),
+            type: wallet_transaction_schema_1.WalletTxnType.PurchaseRedemption,
+            direction: wallet_transaction_schema_1.WalletTxnDirection.Debit,
+            status: wallet_transaction_schema_1.WalletTxnStatus.Spent,
+        })
+            .exec();
+        let reversed = 0;
+        for (const row of rows) {
+            await this.reverse(row._id, reason);
+            reversed += 1;
+        }
+        return reversed;
+    }
     async computeRedeemable(userId, orderTotalKobo, maxPromoPercent) {
         const { promoBalance, earnedBalance } = await this.getBalance(userId);
         const orderTotal = Math.max(0, Math.floor(orderTotalKobo || 0));

@@ -135,6 +135,21 @@ export class User extends BaseSchema {
   @Prop({ default: false })
   isSuspended: boolean;
 
+  // ─── Phone Verification (SMS OTP) ────────────────────────
+  // Separate from `mobile` (which is free-form contact info). These are only
+  // set once the number has passed SMS OTP verification. `phoneE164` is the
+  // normalized +234... form and is indexed for the "one account per phone"
+  // uniqueness checks. Reward eligibility is gated on isPhoneVerified.
+
+  @Prop({ default: false })
+  isPhoneVerified: boolean;
+
+  @Prop({ type: String, default: null, index: true })
+  phoneE164?: string;
+
+  @Prop({ type: Date, default: null })
+  phoneVerifiedAt?: Date;
+
   // ─── Personal Details ────────────────────────────────────
 
   @Prop({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] })
@@ -224,3 +239,5 @@ export const UserSchema = SchemaFactory.createForClass(User);
 // ─────────────────────────────────────────────────────────────
 UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
+// Fast lookups for the "one verified account per phone" enforcement.
+UserSchema.index({ phoneE164: 1 });

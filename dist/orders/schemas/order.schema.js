@@ -190,6 +190,24 @@ __decorate([
     (0, mongoose_1.Prop)({ type: String, default: null }),
     __metadata("design:type", String)
 ], Order.prototype, "cancellationReason", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0 }),
+    __metadata("design:type", Number)
+], Order.prototype, "walletCreditApplied", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: {
+            promo: { type: Number, default: 0 },
+            earned: { type: Number, default: 0 },
+        },
+        default: null,
+    }),
+    __metadata("design:type", Object)
+], Order.prototype, "walletCreditBreakdown", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: mongoose_2.Types.ObjectId, default: null }),
+    __metadata("design:type", mongoose_2.Types.ObjectId)
+], Order.prototype, "walletRedemptionTxnId", void 0);
 exports.Order = Order = __decorate([
     (0, mongoose_1.Schema)({
         timestamps: true,

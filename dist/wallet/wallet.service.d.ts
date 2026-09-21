@@ -40,6 +40,7 @@ export declare class WalletService {
     matureTransaction(transactionId: string | Types.ObjectId): Promise<WalletTransactionDocument | null>;
     debit(params: DebitParams): Promise<WalletTransactionDocument>;
     reverse(originalTransactionId: string | Types.ObjectId, reason: string): Promise<WalletTransactionDocument | null>;
+    reverseOrderRedemptions(orderId: string | Types.ObjectId, reason: string): Promise<number>;
     computeRedeemable(userId: string | Types.ObjectId, orderTotalKobo: number, maxPromoPercent: number): Promise<{
         promoApplied: number;
         earnedApplied: number;

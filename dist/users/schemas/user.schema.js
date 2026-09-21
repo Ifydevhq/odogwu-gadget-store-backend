@@ -82,6 +82,18 @@ __decorate([
     __metadata("design:type", Boolean)
 ], User.prototype, "isSuspended", void 0);
 __decorate([
+    (0, mongoose_1.Prop)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isPhoneVerified", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null, index: true }),
+    __metadata("design:type", String)
+], User.prototype, "phoneE164", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, default: null }),
+    __metadata("design:type", Date)
+], User.prototype, "phoneVerifiedAt", void 0);
+__decorate([
     (0, mongoose_1.Prop)({ enum: ['male', 'female', 'other', 'prefer_not_to_say'] }),
     __metadata("design:type", String)
 ], User.prototype, "gender", void 0);
@@ -175,4 +187,5 @@ exports.User = User = __decorate([
 exports.UserSchema = mongoose_1.SchemaFactory.createForClass(User);
 exports.UserSchema.index({ email: 1 }, { unique: true });
 exports.UserSchema.index({ role: 1 });
+exports.UserSchema.index({ phoneE164: 1 });
 //# sourceMappingURL=user.schema.js.map

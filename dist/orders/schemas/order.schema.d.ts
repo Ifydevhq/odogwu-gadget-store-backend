@@ -68,6 +68,12 @@ export declare class Order extends BaseSchema {
     buyerNote?: string;
     adminNote?: string;
     cancellationReason?: string;
+    walletCreditApplied?: number;
+    walletCreditBreakdown?: {
+        promo: number;
+        earned: number;
+    };
+    walletRedemptionTxnId?: Types.ObjectId;
 }
 export declare const OrderSchema: import("mongoose").Schema<Order, import("mongoose").Model<Order, any, any, any, Document<unknown, any, Order> & Order & {
     _id: Types.ObjectId;

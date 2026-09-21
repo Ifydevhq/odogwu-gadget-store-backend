@@ -118,6 +118,25 @@ export class CheckoutSession {
   @Prop({ type: String, default: 'NGN' })
   currency: string;
 
+  // ─── Wallet credit (opt-in) ───────────────────────────────
+  // Intended store credit to apply once payment confirms. The provider is
+  // charged `grandTotal` (already reduced by walletCreditApplied). The wallet
+  // is NOT debited here — the debit happens in OrdersService.confirmPayment
+  // after the money lands, so an abandoned/failed session never touches the
+  // wallet.
+
+  @Prop({ type: Number, default: 0 })
+  walletCreditApplied: number;
+
+  @Prop({
+    type: {
+      promo: { type: Number, default: 0 },
+      earned: { type: Number, default: 0 },
+    },
+    default: null,
+  })
+  walletCreditBreakdown?: { promo: number; earned: number };
+
   // ─── Payment ──────────────────────────────────────────────
 
   @Prop({ type: String, enum: ['paystack', 'opay'], default: 'paystack' })

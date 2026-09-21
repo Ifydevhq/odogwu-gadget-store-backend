@@ -14,6 +14,8 @@ export declare class CreateOrderDto {
     quantity?: number;
     shippingAddress: ShippingAddressDto;
     buyerNote?: string;
+    applyWalletCredit?: boolean;
+    walletCreditAmount?: number;
 }
 export declare class UpdateOrderStatusDto {
     status?: OrderStatus;

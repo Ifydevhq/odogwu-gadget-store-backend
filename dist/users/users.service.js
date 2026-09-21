@@ -90,6 +90,35 @@ let UsersService = class UsersService {
     async countUsers(filter = {}) {
         return this.userModel.countDocuments(filter).exec();
     }
+    async findVerifiedByPhoneE164(phoneE164) {
+        return this.userModel
+            .findOne({ phoneE164, isPhoneVerified: true })
+            .exec();
+    }
+    async setPhoneVerified(userId, phoneE164) {
+        const user = await this.userModel
+            .findByIdAndUpdate(userId, {
+            $set: {
+                isPhoneVerified: true,
+                phoneE164,
+                phoneVerifiedAt: new Date(),
+                'mobile.phoneNumber': phoneE164,
+                'mobile.isoCode': 'NG',
+            },
+        }, { new: true, runValidators: true })
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async isRewardEligible(userId) {
+        const user = await this.userModel
+            .findById(userId)
+            .select('isPhoneVerified')
+            .exec();
+        return user?.isPhoneVerified === true;
+    }
     async deleteAccount(userId, password) {
         const user = await this.userModel
             .findById(userId)
