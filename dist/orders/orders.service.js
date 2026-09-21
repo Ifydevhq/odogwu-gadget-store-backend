@@ -532,13 +532,15 @@ let OrdersService = OrdersService_1 = class OrdersService {
             });
         }
         try {
-            await this.alertsService.createAlert({
+            await this.alertsService.createAlertAndPush({
                 userId: order.buyerId.toString(),
                 type: contants_2.AlertType.PaymentSuccessful,
                 title: 'Payment received ✅',
                 message: `We have received payment for order #${order.orderNumber}.`,
-                entityId: order._id,
+                entityId: order._id.toString(),
                 entityType: 'order',
+                metadata: { orderNumber: order.orderNumber },
+                route: `/orders/${order._id.toString()}`,
             });
         }
         catch {
@@ -598,14 +600,16 @@ let OrdersService = OrdersService_1 = class OrdersService {
             common_1.Logger.error(`❌ COD owner WhatsApp failed: ${e.message}`);
         }
         try {
-            await this.alertsService.createAlert({
+            await this.alertsService.createAlertAndPush({
                 userId: order.buyerId.toString(),
                 type: contants_2.AlertType.OrderPlaced,
                 title: 'Order placed 🛵',
                 message: `We have received order #${order.orderNumber}. ` +
                     `Our team will reach out to confirm it — payment is due on delivery.`,
-                entityId: order._id,
+                entityId: order._id.toString(),
                 entityType: 'order',
+                metadata: { orderNumber: order.orderNumber },
+                route: `/orders/${order._id.toString()}`,
             });
         }
         catch {
