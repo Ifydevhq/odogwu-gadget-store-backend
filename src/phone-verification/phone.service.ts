@@ -20,6 +20,7 @@ import {
   Injectable,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { UsersService } from '../users/users.service';
@@ -54,7 +55,26 @@ export class PhoneService {
     private readonly walletService: WalletService,
     // @Global ReferralsModule — injected directly to avoid a module cycle.
     private readonly referralsService: ReferralsService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /**
+   * Development OTP bypass. When OTP_DEV_BYPASS is exactly 'true', request-otp
+   * skips the SMS provider entirely (no real SMS is sent) and verify-otp
+   * accepts the fixed test codes '000000' or '123456' for ANY number. When the
+   * flag is unset or anything other than 'true', the real SMS_PROVIDER is used.
+   *
+   * Intended for staging/local demos — never enable it on production.
+   */
+  private get devBypassEnabled(): boolean {
+    return (
+      (this.configService.get<string>('OTP_DEV_BYPASS') || '')
+        .trim()
+        .toLowerCase() === 'true'
+    );
+  }
+
+  private static readonly DEV_BYPASS_CODES = ['000000', '123456'];
 
   /**
    * POST /auth/phone/request-otp
@@ -71,6 +91,15 @@ export class PhoneService {
     const owner = await this.usersService.findVerifiedByPhoneE164(phoneE164);
     if (owner && owner._id.toString() !== userId) {
       throw new BadRequestException('This phone number is already in use');
+    }
+
+    // Dev bypass: don't call the SMS provider at all — no real code is sent.
+    if (this.devBypassEnabled) {
+      this.logger.warn(
+        `OTP_DEV_BYPASS active — skipping SMS for ${phoneE164}. ` +
+          `Use code ${PhoneService.DEV_BYPASS_CODES.join(' or ')} to verify.`,
+      );
+      return { sent: true };
     }
 
     await this.smsProvider.sendCode(phoneE164);
@@ -96,7 +125,10 @@ export class PhoneService {
       throw new BadRequestException('This phone number is already in use');
     }
 
-    const approved = await this.smsProvider.checkCode(phoneE164, code);
+    // Dev bypass: accept the fixed test codes instead of the real provider.
+    const approved = this.devBypassEnabled
+      ? PhoneService.DEV_BYPASS_CODES.includes((code || '').trim())
+      : await this.smsProvider.checkCode(phoneE164, code);
     if (!approved) {
       throw new BadRequestException('Invalid or expired verification code');
     }
