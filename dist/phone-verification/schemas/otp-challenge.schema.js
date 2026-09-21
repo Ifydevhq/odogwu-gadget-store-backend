@@ -19,9 +19,13 @@ __decorate([
     __metadata("design:type", String)
 ], OtpChallenge.prototype, "phoneE164", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ required: true }),
+    (0, mongoose_1.Prop)({ default: null }),
     __metadata("design:type", String)
 ], OtpChallenge.prototype, "codeHash", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ default: null }),
+    __metadata("design:type", String)
+], OtpChallenge.prototype, "providerRef", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ required: true }),
     __metadata("design:type", Date)

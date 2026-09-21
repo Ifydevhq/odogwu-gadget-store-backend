@@ -18,9 +18,19 @@ export class OtpChallenge {
   @Prop({ required: true, unique: true, index: true })
   phoneE164: string;
 
-  /** sha256(code:phone:pepper) — never store the raw code. */
-  @Prop({ required: true })
-  codeHash: string;
+  /**
+   * sha256(code:phone:pepper) for providers that we verify ourselves (WhatsApp).
+   * Not used when the provider manages the code (Termii pin id → providerRef).
+   */
+  @Prop({ default: null })
+  codeHash: string | null;
+
+  /**
+   * Opaque reference from a provider that manages the code itself (e.g. Termii's
+   * pinId), passed back on verify. Null for self-managed (WhatsApp) codes.
+   */
+  @Prop({ default: null })
+  providerRef: string | null;
 
   @Prop({ required: true })
   expiresAt: Date;

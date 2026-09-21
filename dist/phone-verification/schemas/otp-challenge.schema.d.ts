@@ -2,7 +2,8 @@ import { HydratedDocument } from 'mongoose';
 export type OtpChallengeDocument = HydratedDocument<OtpChallenge>;
 export declare class OtpChallenge {
     phoneE164: string;
-    codeHash: string;
+    codeHash: string | null;
+    providerRef: string | null;
     expiresAt: Date;
     attempts: number;
 }
