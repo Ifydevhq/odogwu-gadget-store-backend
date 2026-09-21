@@ -24,7 +24,7 @@ export declare class AffiliateController {
         affiliateCode: string;
         link: string;
     }>;
-    listProducts(paging: PaginationDto): Promise<{
+    listProducts(paging: PaginationDto, search?: string): Promise<{
         items: import("../listings/schemas/listing.schema").ListingDocument[];
         total: number;
         page: number;

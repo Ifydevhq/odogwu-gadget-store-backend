@@ -25,6 +25,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -212,10 +213,23 @@ export class CreateListingDto {
   affiliateEnabled?: boolean;
 
   @ApiPropertyOptional({
+    example: 'percent',
+    enum: ['percent', 'flat'],
+    default: 'percent',
+    description:
+      "How the affiliate reward is calculated: 'percent' of the item total, " +
+      "or a 'flat' amount in kobo.",
+  })
+  @IsIn(['percent', 'flat'])
+  @IsOptional()
+  affiliateCommissionType?: string;
+
+  @ApiPropertyOptional({
     example: 10,
     default: 0,
     description:
-      'Affiliate commission percentage (0-100). Falls back to the platform ' +
+      'Affiliate commission percentage (0-100), used when ' +
+      "affiliateCommissionType is 'percent'. Falls back to the platform " +
       'default when 0.',
   })
   @IsNumber()
@@ -223,6 +237,18 @@ export class CreateListingDto {
   @Max(100)
   @IsOptional()
   affiliateCommissionPercent?: number;
+
+  @ApiPropertyOptional({
+    example: 50000,
+    default: 0,
+    description:
+      'Flat affiliate commission in kobo, used when affiliateCommissionType ' +
+      "is 'flat'.",
+  })
+  @IsNumber()
+  @Min(0)
+  @IsOptional()
+  affiliateCommissionAmount?: number;
 }
 
 // ═══════════════════════════════════════════════════════════════

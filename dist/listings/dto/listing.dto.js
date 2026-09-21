@@ -217,9 +217,22 @@ __decorate([
 ], CreateListingDto.prototype, "affiliateEnabled", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({
+        example: 'percent',
+        enum: ['percent', 'flat'],
+        default: 'percent',
+        description: "How the affiliate reward is calculated: 'percent' of the item total, " +
+            "or a 'flat' amount in kobo.",
+    }),
+    (0, class_validator_1.IsIn)(['percent', 'flat']),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateListingDto.prototype, "affiliateCommissionType", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
         example: 10,
         default: 0,
-        description: 'Affiliate commission percentage (0-100). Falls back to the platform ' +
+        description: 'Affiliate commission percentage (0-100), used when ' +
+            "affiliateCommissionType is 'percent'. Falls back to the platform " +
             'default when 0.',
     }),
     (0, class_validator_1.IsNumber)(),
@@ -228,6 +241,18 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], CreateListingDto.prototype, "affiliateCommissionPercent", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 50000,
+        default: 0,
+        description: 'Flat affiliate commission in kobo, used when affiliateCommissionType ' +
+            "is 'flat'.",
+    }),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Number)
+], CreateListingDto.prototype, "affiliateCommissionAmount", void 0);
 class UpdateListingDto extends (0, swagger_1.PartialType)((0, swagger_1.OmitType)(CreateListingDto, ['storeId', 'type'])) {
 }
 exports.UpdateListingDto = UpdateListingDto;

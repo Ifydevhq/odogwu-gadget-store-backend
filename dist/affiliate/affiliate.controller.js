@@ -44,8 +44,8 @@ let AffiliateController = class AffiliateController {
             throw new common_1.BadRequestException(err?.message || 'Could not generate link');
         }
     }
-    async listProducts(paging) {
-        return this.affiliateService.listAffiliateProducts(paging);
+    async listProducts(paging, search) {
+        return this.affiliateService.listAffiliateProducts(paging, search);
     }
 };
 exports.AffiliateController = AffiliateController;
@@ -91,10 +91,12 @@ __decorate([
 __decorate([
     (0, common_1.Get)('products'),
     (0, swagger_1.ApiOperation)({ summary: 'List affiliate-enabled products (paginated)' }),
+    (0, swagger_1.ApiQuery)({ name: 'search', required: false }),
     (0, response_message_decorator_1.ResponseMessage)('Affiliate products retrieved successfully'),
     __param(0, (0, common_1.Query)()),
+    __param(1, (0, common_1.Query)('search')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto]),
+    __metadata("design:paramtypes", [pagination_dto_1.PaginationDto, String]),
     __metadata("design:returntype", Promise)
 ], AffiliateController.prototype, "listProducts", null);
 exports.AffiliateController = AffiliateController = __decorate([

@@ -118,7 +118,10 @@ export class AffiliateService {
 
       const listings = await this.listingModel
         .find({ _id: { $in: listingIds.map((id) => new Types.ObjectId(id)) } })
-        .select('_id affiliateEnabled affiliateCommissionPercent')
+        .select(
+          '_id affiliateEnabled affiliateCommissionType ' +
+            'affiliateCommissionPercent affiliateCommissionAmount',
+        )
         .lean()
         .exec();
       const listingById = new Map<string, any>(
@@ -143,13 +146,21 @@ export class AffiliateService {
         const listing = listingById.get(listingIdStr);
         if (!listing || !listing.affiliateEnabled) continue;
 
-        const pct =
-          listing.affiliateCommissionPercent > 0
-            ? listing.affiliateCommissionPercent
-            : defaultPct;
-        if (!(pct > 0)) continue;
-
-        const amount = Math.round((item.totalPrice * pct) / 100);
+        // Flat reward: a fixed amount (kobo) per sale, capped at the item total
+        // so an affiliate can never earn more than the item is worth.
+        let pct = 0;
+        let amount = 0;
+        if (listing.affiliateCommissionType === 'flat') {
+          amount = Math.round(listing.affiliateCommissionAmount || 0);
+          if (amount > item.totalPrice) amount = item.totalPrice;
+        } else {
+          pct =
+            listing.affiliateCommissionPercent > 0
+              ? listing.affiliateCommissionPercent
+              : defaultPct;
+          if (!(pct > 0)) continue;
+          amount = Math.round((item.totalPrice * pct) / 100);
+        }
         if (!(amount > 0)) continue;
 
         result.set(listingIdStr, {
@@ -454,8 +465,11 @@ export class AffiliateService {
     return { listingId, affiliateCode: code, link };
   }
 
-  /** Paginated list of affiliate-enabled live listings. */
-  async listAffiliateProducts(paging: PaginationDto): Promise<{
+  /** Paginated list of affiliate-enabled live listings (optionally searched). */
+  async listAffiliateProducts(
+    paging: PaginationDto,
+    search?: string,
+  ): Promise<{
     items: ListingDocument[];
     total: number;
     page: number;
@@ -465,7 +479,17 @@ export class AffiliateService {
     const page = paging.page ?? 1;
     const perPage = paging.perPage ?? 20;
     const skip = (page - 1) * perPage;
-    const filter = { affiliateEnabled: true, status: 'live' };
+    const filter: Record<string, any> = {
+      affiliateEnabled: true,
+      status: 'live',
+    };
+
+    // Free-text search over the product name (case-insensitive, escaped).
+    const term = (search ?? '').trim();
+    if (term) {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      filter.itemName = { $regex: escaped, $options: 'i' };
+    }
 
     const [items, total] = await Promise.all([
       this.listingModel

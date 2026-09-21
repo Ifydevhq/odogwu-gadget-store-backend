@@ -63,7 +63,8 @@ let AffiliateService = AffiliateService_1 = class AffiliateService {
                 return result;
             const listings = await this.listingModel
                 .find({ _id: { $in: listingIds.map((id) => new mongoose_2.Types.ObjectId(id)) } })
-                .select('_id affiliateEnabled affiliateCommissionPercent')
+                .select('_id affiliateEnabled affiliateCommissionType ' +
+                'affiliateCommissionPercent affiliateCommissionAmount')
                 .lean()
                 .exec();
             const listingById = new Map(listings.map((l) => [String(l._id), l]));
@@ -83,12 +84,22 @@ let AffiliateService = AffiliateService_1 = class AffiliateService {
                 const listing = listingById.get(listingIdStr);
                 if (!listing || !listing.affiliateEnabled)
                     continue;
-                const pct = listing.affiliateCommissionPercent > 0
-                    ? listing.affiliateCommissionPercent
-                    : defaultPct;
-                if (!(pct > 0))
-                    continue;
-                const amount = Math.round((item.totalPrice * pct) / 100);
+                let pct = 0;
+                let amount = 0;
+                if (listing.affiliateCommissionType === 'flat') {
+                    amount = Math.round(listing.affiliateCommissionAmount || 0);
+                    if (amount > item.totalPrice)
+                        amount = item.totalPrice;
+                }
+                else {
+                    pct =
+                        listing.affiliateCommissionPercent > 0
+                            ? listing.affiliateCommissionPercent
+                            : defaultPct;
+                    if (!(pct > 0))
+                        continue;
+                    amount = Math.round((item.totalPrice * pct) / 100);
+                }
                 if (!(amount > 0))
                     continue;
                 result.set(listingIdStr, {
@@ -307,11 +318,19 @@ let AffiliateService = AffiliateService_1 = class AffiliateService {
         const link = `${base}/product/${listingId}?aff=${code}`;
         return { listingId, affiliateCode: code, link };
     }
-    async listAffiliateProducts(paging) {
+    async listAffiliateProducts(paging, search) {
         const page = paging.page ?? 1;
         const perPage = paging.perPage ?? 20;
         const skip = (page - 1) * perPage;
-        const filter = { affiliateEnabled: true, status: 'live' };
+        const filter = {
+            affiliateEnabled: true,
+            status: 'live',
+        };
+        const term = (search ?? '').trim();
+        if (term) {
+            const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            filter.itemName = { $regex: escaped, $options: 'i' };
+        }
         const [items, total] = await Promise.all([
             this.listingModel
                 .find(filter)
