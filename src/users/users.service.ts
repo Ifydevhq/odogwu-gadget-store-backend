@@ -68,9 +68,62 @@ export class UsersService {
     const user = new this.userModel({
       ...createUserDto,
       password: hashedPassword,
+      // Every new user gets their own shareable referral code.
+      referralCode: await this.generateUniqueReferralCode(),
     });
 
     return user.save();
+  }
+
+  // ─── Referral Codes ─────────────────────────────────────
+
+  /** Generate a random 8-char uppercase alphanumeric code (no I/O). */
+  private generateReferralCode(length = 8): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let out = '';
+    for (let i = 0; i < length; i++) {
+      out += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return out;
+  }
+
+  /**
+   * Generate a referral code that is not already taken. Retries a handful of
+   * times (collisions are astronomically unlikely at 36^8) before falling back
+   * to a longer code.
+   */
+  async generateUniqueReferralCode(): Promise<string> {
+    for (let i = 0; i < 10; i++) {
+      const code = this.generateReferralCode();
+      const exists = await this.userModel.exists({ referralCode: code }).exec();
+      if (!exists) return code;
+    }
+    return this.generateReferralCode(10);
+  }
+
+  /** Resolve a referral code to the user who owns it (null if none). */
+  async findByReferralCode(code: string): Promise<UserDocument | null> {
+    if (!code) return null;
+    return this.userModel
+      .findOne({ referralCode: code.trim().toUpperCase() })
+      .exec();
+  }
+
+  /**
+   * Ensure a user document has a referral code, generating + persisting one if
+   * missing. Used to lazily backfill legacy accounts on read.
+   */
+  async ensureReferralCode(user: UserDocument): Promise<UserDocument> {
+    if (user.referralCode) return user;
+    user.referralCode = await this.generateUniqueReferralCode();
+    try {
+      await user.save();
+    } catch {
+      // A concurrent request may have set it first — re-read the latest value.
+      const fresh = await this.userModel.findById(user._id).exec();
+      if (fresh?.referralCode) user.referralCode = fresh.referralCode;
+    }
+    return user;
   }
 
   /**
@@ -82,6 +135,11 @@ export class UsersService {
     const user = await this.userModel.findById(id).exec();
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+    // Lazily backfill a referral code for legacy accounts created before the
+    // referral system existed. Only writes when the code is actually missing.
+    if (!user.referralCode) {
+      await this.ensureReferralCode(user);
     }
     return user;
   }
@@ -179,6 +237,65 @@ export class UsersService {
    */
   async countUsers(filter: Record<string, any> = {}): Promise<number> {
     return this.userModel.countDocuments(filter).exec();
+  }
+
+  // ─── Phone Verification ─────────────────────────────────
+
+  /**
+   * Find a user who has ALREADY verified this exact E.164 phone number.
+   * Used to enforce "one verified account per phone". Returns null if the
+   * phone is not verified against any account yet.
+   */
+  async findVerifiedByPhoneE164(
+    phoneE164: string,
+  ): Promise<UserDocument | null> {
+    return this.userModel
+      .findOne({ phoneE164, isPhoneVerified: true })
+      .exec();
+  }
+
+  /**
+   * Mark a user's phone as verified: sets isPhoneVerified/phoneE164/
+   * phoneVerifiedAt and mirrors the number onto the legacy `mobile` field.
+   */
+  async setPhoneVerified(
+    userId: string,
+    phoneE164: string,
+  ): Promise<UserDocument> {
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        userId,
+        {
+          $set: {
+            isPhoneVerified: true,
+            phoneE164,
+            phoneVerifiedAt: new Date(),
+            'mobile.phoneNumber': phoneE164,
+            'mobile.isoCode': 'NG',
+          },
+        },
+        { new: true, runValidators: true },
+      )
+      .exec();
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
+  }
+
+  /**
+   * Reward-eligibility gate. A user can only earn phone-keyed rewards
+   * (welcome credit today, referral rewards in a later phase) once they have
+   * verified their phone number.
+   */
+  async isRewardEligible(userId: string): Promise<boolean> {
+    const user = await this.userModel
+      .findById(userId)
+      .select('isPhoneVerified')
+      .exec();
+    return user?.isPhoneVerified === true;
   }
 
   // ─── Account Settings ───────────────────────────────────

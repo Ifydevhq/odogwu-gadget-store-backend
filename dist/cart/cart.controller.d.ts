@@ -61,8 +61,28 @@ export declare class CartController {
             itemCount: number;
         };
         grandTotal: any;
+        walletCreditApplied: number;
+        amountDue: number;
         itemCount: number;
         skippedItems: any[];
+        walletFunded?: undefined;
+        sessionId?: undefined;
+        payment?: undefined;
+    } | {
+        paymentMethod: string;
+        walletFunded: boolean;
+        order: {
+            _id: any;
+            orderNumber: string;
+            totalAmount: number;
+            itemCount: number;
+        };
+        grandTotal: any;
+        walletCreditApplied: number;
+        amountDue: number;
+        itemCount: number;
+        skippedItems: any[];
+        codOrder?: undefined;
         sessionId?: undefined;
         payment?: undefined;
     } | {
@@ -72,12 +92,15 @@ export declare class CartController {
             authorizationUrl: any;
             accessCode: any;
             reference: any;
-            grandTotal: any;
+            grandTotal: number;
         };
+        walletCreditApplied: number;
         itemCount: number;
         skippedItems: any[];
         codOrder?: undefined;
         order?: undefined;
         grandTotal?: undefined;
+        amountDue?: undefined;
+        walletFunded?: undefined;
     }>;
 }

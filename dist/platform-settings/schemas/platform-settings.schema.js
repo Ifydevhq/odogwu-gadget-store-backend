@@ -106,6 +106,34 @@ __decorate([
     (0, mongoose_1.Prop)({ default: 72 }),
     __metadata("design:type", Number)
 ], PlatformSettings.prototype, "maxReturnHoursBeforeAutoComplete", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 200000 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "welcomeCreditAmount", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 20 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "creditMaxPercentPerOrder", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 1000000 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "referralMinOrderAmount", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 100000 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "referralRewardAmount", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 7 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "affiliateHoldDays", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "affiliateDefaultCommissionPercent", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 100000 }),
+    __metadata("design:type", Number)
+], PlatformSettings.prototype, "minWithdrawalAmount", void 0);
 exports.PlatformSettings = PlatformSettings = __decorate([
     (0, mongoose_1.Schema)({ timestamps: true })
 ], PlatformSettings);

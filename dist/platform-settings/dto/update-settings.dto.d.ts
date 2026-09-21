@@ -19,4 +19,11 @@ export declare class UpdatePlatformSettingsDto {
     minListingPriceKobo?: number;
     maxListingImages?: number;
     maxReturnHoursBeforeAutoComplete?: number;
+    welcomeCreditAmount?: number;
+    creditMaxPercentPerOrder?: number;
+    referralMinOrderAmount?: number;
+    referralRewardAmount?: number;
+    affiliateHoldDays?: number;
+    affiliateDefaultCommissionPercent?: number;
+    minWithdrawalAmount?: number;
 }

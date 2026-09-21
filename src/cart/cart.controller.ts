@@ -141,6 +141,9 @@ export class CartController {
       dto.callbackUrl,
       dto.deliveryFee,
       dto.paymentMethod,
+      dto.applyWalletCredit,
+      dto.walletCreditAmount,
+      dto.affiliateCodes,
     );
   }
 }

@@ -46,6 +46,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { AlertType } from '@config/contants';
+import { ReferralsService } from '../referrals/referrals.service';
 
 @Injectable()
 export class AuthService {
@@ -55,6 +56,7 @@ export class AuthService {
     private configService: ConfigService,
     private notificationsService: NotificationsService,
     private alertsService: AlertsService,
+    private referralsService: ReferralsService,
   ) {}
 
   // ─── Helpers ─────────────────────────────────────────────
@@ -111,8 +113,24 @@ export class AuthService {
     const verificationExpires = new Date();
     verificationExpires.setMinutes(verificationExpires.getMinutes() + 10);
 
+    // Resolve an optional referral code to the referring user. Invalid codes
+    // are ignored silently — they must never block a signup. `referredBy` is
+    // stored now, but only becomes reward-eligible once the new user verifies
+    // their phone (see ReferralsService.activateOnPhoneVerified).
+    const { referralCode, ...registerData } = registerDto;
+    let referredBy: string | undefined;
+    if (referralCode) {
+      try {
+        const referrer = await this.usersService.findByReferralCode(referralCode);
+        if (referrer) referredBy = referrer._id.toString();
+      } catch {
+        /* ignore — invalid/lookup failure never blocks signup */
+      }
+    }
+
     const user = await this.usersService.create({
-      ...registerDto,
+      ...registerData,
+      referredBy,
       authProvider: AuthProvider.Local,
       verificationCode: otp,
       verificationExpires,
@@ -120,6 +138,14 @@ export class AuthService {
 
     if (!user) {
       throw new InternalServerErrorException('Failed to create user');
+    }
+
+    // Create the pending Referral row (self-refer is guarded inside). Never
+    // blocks registration.
+    if (referredBy) {
+      this.referralsService
+        .registerReferral(referredBy, user._id.toString())
+        .catch(() => {});
     }
 
     // Send verification email with OTP

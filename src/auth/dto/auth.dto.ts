@@ -49,6 +49,14 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   avatar?: string;
+
+  @ApiPropertyOptional({
+    example: 'AB12CD34',
+    description: "Referrer's referral code (optional). Invalid codes are ignored.",
+  })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════

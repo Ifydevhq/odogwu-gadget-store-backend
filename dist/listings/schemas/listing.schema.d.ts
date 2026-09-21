@@ -60,6 +60,8 @@ export declare class Listing extends BaseSchema {
     views: number;
     likes: number;
     totalSales: number;
+    affiliateEnabled: boolean;
+    affiliateCommissionPercent: number;
 }
 export declare const ListingSchema: import("mongoose").Schema<Listing, import("mongoose").Model<Listing, any, any, any, Document<unknown, any, Listing> & Listing & {
     _id: Types.ObjectId;

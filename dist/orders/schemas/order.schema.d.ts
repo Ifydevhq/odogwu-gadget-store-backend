@@ -14,6 +14,10 @@ declare class OrderItem {
     sellerId: Types.ObjectId;
     creatorId: Types.ObjectId;
     commissionRate: number;
+    affiliateCode?: string;
+    affiliateUserId?: Types.ObjectId;
+    affiliateCommissionPercent?: number;
+    affiliateCommissionAmount?: number;
 }
 declare class ShippingAddress {
     fullName: string;
@@ -68,6 +72,12 @@ export declare class Order extends BaseSchema {
     buyerNote?: string;
     adminNote?: string;
     cancellationReason?: string;
+    walletCreditApplied?: number;
+    walletCreditBreakdown?: {
+        promo: number;
+        earned: number;
+    };
+    walletRedemptionTxnId?: Types.ObjectId;
 }
 export declare const OrderSchema: import("mongoose").Schema<Order, import("mongoose").Model<Order, any, any, any, Document<unknown, any, Order> & Order & {
     _id: Types.ObjectId;

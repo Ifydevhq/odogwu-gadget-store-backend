@@ -23,6 +23,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
+import { ReferralsService } from '../referrals/referrals.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 import { OrderStatus } from '@config/contants';
 
 @Injectable()
@@ -32,6 +34,10 @@ export class OrdersCronService {
   constructor(
     @InjectModel(Order.name) private orderModel: Model<OrderDocument>,
     private platformSettingsService: PlatformSettingsService,
+    // @Global ReferralsModule — injected directly to avoid a module cycle.
+    private referralsService: ReferralsService,
+    // @Global AffiliateModule — injected directly to avoid a module cycle.
+    private affiliateService: AffiliateService,
   ) {}
 
   /**
@@ -48,6 +54,18 @@ export class OrdersCronService {
       // Calculate the cutoff date: orders delivered before this time should auto-complete
       const cutoffDate = new Date();
       cutoffDate.setHours(cutoffDate.getHours() - maxHours);
+
+      // Capture the buyers of the orders about to auto-complete BEFORE the bulk
+      // update, so we can run the referral cumulative-spend check for each of
+      // them afterwards (they will then be counted in the Completed aggregate).
+      // Fetch full docs (not just buyerId) so affiliate processing can read
+      // each order's items[] after the bulk completion below.
+      const qualifying = await this.orderModel
+        .find({
+          status: OrderStatus.Delivered,
+          'trackingInfo.deliveredAt': { $lte: cutoffDate },
+        })
+        .exec();
 
       // Find and update all qualifying orders in one bulk operation
       const result = await this.orderModel.updateMany(
@@ -81,6 +99,22 @@ export class OrdersCronService {
           `Auto-completed ${result.modifiedCount} delivered order(s) ` +
             `(return window: ${maxHours}h, cutoff: ${cutoffDate.toISOString()})`,
         );
+
+        // Referral: recompute cumulative spend once per distinct buyer. Each
+        // call is self-contained (never throws) so it cannot break the cron.
+        const distinctBuyers = new Set(
+          qualifying.map((o) => o.buyerId?.toString()).filter(Boolean),
+        );
+        for (const buyerId of distinctBuyers) {
+          await this.referralsService.recordCompletedOrder(buyerId);
+        }
+
+        // Affiliate: create held commissions for each auto-completed order.
+        // Each call is self-contained (never throws) so it cannot break the
+        // cron; processOrderCompletion is idempotent per order+listing.
+        for (const order of qualifying) {
+          await this.affiliateService.processOrderCompletion(order);
+        }
       }
     } catch (error) {
       this.logger.error(

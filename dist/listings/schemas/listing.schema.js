@@ -207,6 +207,14 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Number, default: 0 }),
     __metadata("design:type", Number)
 ], Listing.prototype, "totalSales", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Boolean, default: false }),
+    __metadata("design:type", Boolean)
+], Listing.prototype, "affiliateEnabled", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, default: 0, min: 0, max: 100 }),
+    __metadata("design:type", Number)
+], Listing.prototype, "affiliateCommissionPercent", void 0);
 exports.Listing = Listing = __decorate([
     (0, mongoose_1.Schema)({
         timestamps: true,

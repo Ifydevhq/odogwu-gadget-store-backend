@@ -55,6 +55,14 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { ListingsService } from 'src/listings/listings.service';
 import { AlertsService } from '../alerts/alerts.service';
 import { AlertType } from '@config/contants';
+import { WalletService } from '../wallet/wallet.service';
+import {
+  WalletBucket,
+  WalletTxnType,
+} from '../wallet/schemas/wallet-transaction.schema';
+import { PlatformSettingsService } from '../platform-settings/platform-settings.service';
+import { ReferralsService } from '../referrals/referrals.service';
+import { AffiliateService } from '../affiliate/affiliate.service';
 
 @Injectable()
 export class OrdersService {
@@ -65,7 +73,282 @@ export class OrdersService {
     private creatorsService: CreatorsService,
     private notificationsService: NotificationsService,
     private alertsService: AlertsService,
+    private walletService: WalletService,
+    private platformSettingsService: PlatformSettingsService,
+    // @Global ReferralsModule — injected directly (no OrdersModule import of
+    // ReferralsModule) to avoid a circular module dependency.
+    private referralsService: ReferralsService,
+    // @Global AffiliateModule — injected directly (same pattern as referrals)
+    // to avoid an OrdersModule <-> AffiliateModule cycle.
+    private affiliateService: AffiliateService,
   ) {}
+
+  private readonly logger = new Logger(OrdersService.name);
+
+  // ═══════════════════════════════════════════════════════════
+  // WALLET CREDIT REDEMPTION HELPERS (opt-in)
+  // ═══════════════════════════════════════════════════════════
+  //
+  // Money model (all kobo):
+  //   * The provider (Paystack/OPay) or the delivery collector is charged
+  //     `order.totalAmount`, which we REDUCE by the applied credit.
+  //   * Promo credit is capped at `creditMaxPercentPerOrder`% of the order;
+  //     earned credit is uncapped (WalletService.computeRedeemable enforces).
+  //   * ONLINE paths (single Buy-Now + cart session): the charge is reduced at
+  //     order-creation time, but the wallet is DEBITED only in confirmPayment,
+  //     after the money lands. An abandoned/failed online order therefore never
+  //     touches the wallet — nothing to leak, nothing to reverse.
+  //   * COD: the "collect on delivery" amount is reduced AND the wallet is
+  //     debited at creation (the order is a real, managed record; reversal on
+  //     cancel/refund restores the credit).
+
+  /**
+   * Compute how much promo/earned credit to apply to a payable amount,
+   * honouring the platform promo % cap and an optional client-supplied cap.
+   * Pure — no writes.
+   */
+  async computeCreditPlan(
+    buyerId: string,
+    payableKobo: number,
+    capKobo?: number,
+  ): Promise<{ promo: number; earned: number; total: number }> {
+    if (!(payableKobo > 0)) return { promo: 0, earned: 0, total: 0 };
+
+    const settings = await this.platformSettingsService.getSettings();
+    const maxPromoPercent = settings?.creditMaxPercentPerOrder ?? 20;
+
+    let { promoApplied, earnedApplied } =
+      await this.walletService.computeRedeemable(
+        buyerId,
+        payableKobo,
+        maxPromoPercent,
+      );
+
+    // Apply an optional client cap on the TOTAL credit (reduce earned first,
+    // then promo, so the promo % cap is never exceeded).
+    if (capKobo != null && capKobo >= 0) {
+      const cap = Math.floor(capKobo);
+      let total = promoApplied + earnedApplied;
+      if (total > cap) {
+        const overflow = total - cap;
+        const cutEarned = Math.min(earnedApplied, overflow);
+        earnedApplied -= cutEarned;
+        const rem = overflow - cutEarned;
+        promoApplied -= Math.min(promoApplied, rem);
+      }
+    }
+
+    // Never exceed the payable amount (defensive — computeRedeemable already
+    // bounds it, but re-guard against rounding).
+    let promo = Math.max(0, Math.floor(promoApplied));
+    let earned = Math.max(0, Math.floor(earnedApplied));
+    if (promo + earned > payableKobo) {
+      const overflow = promo + earned - payableKobo;
+      const cutEarned = Math.min(earned, overflow);
+      earned -= cutEarned;
+      promo -= Math.min(promo, overflow - cutEarned);
+    }
+
+    return { promo, earned, total: promo + earned };
+  }
+
+  /**
+   * ONLINE paths: record the intended credit on the order and reduce the
+   * charge. Does NOT debit the wallet (that happens in confirmPayment). The
+   * caller is responsible for saving the order.
+   */
+  private reserveCreditOnOrder(
+    order: OrderDocument,
+    promo: number,
+    earned: number,
+  ): void {
+    const total = Math.max(0, promo) + Math.max(0, earned);
+    if (total <= 0) return;
+    if (total > order.totalAmount) return; // never negative charge
+    order.walletCreditApplied = total;
+    order.walletCreditBreakdown = {
+      promo: Math.max(0, promo),
+      earned: Math.max(0, earned),
+    };
+    order.totalAmount = order.totalAmount - total;
+  }
+
+  /**
+   * COD path: debit the wallet NOW and reduce the amount collected on
+   * delivery by exactly what we could debit. Lenient per bucket — if a bucket
+   * cannot be debited (rare race) we simply apply less credit and collect the
+   * remainder on delivery, so the buyer is never over- or under-charged.
+   * Assumes `order` is already saved (needs order._id for idempotency).
+   */
+  private async applyCreditImmediate(
+    order: OrderDocument,
+    buyerId: string,
+    capKobo?: number,
+  ): Promise<void> {
+    const plan = await this.computeCreditPlan(
+      buyerId,
+      order.totalAmount,
+      capKobo,
+    );
+    if (plan.total <= 0) return;
+
+    let debitedPromo = 0;
+    let debitedEarned = 0;
+    let firstTxnId: Types.ObjectId | undefined;
+
+    if (plan.promo > 0) {
+      try {
+        const txn = await this.walletService.debit({
+          userId: buyerId,
+          amount: plan.promo,
+          bucket: WalletBucket.Promo,
+          type: WalletTxnType.PurchaseRedemption,
+          description: `Wallet credit (promo) applied to order ${order.orderNumber}`,
+          orderId: order._id,
+          idempotencyKey: `redeem:${order._id}:promo`,
+        });
+        debitedPromo = txn.amount;
+        firstTxnId = txn._id as Types.ObjectId;
+      } catch (err) {
+        this.logger.warn(
+          `COD promo debit failed for ${order.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
+
+    if (plan.earned > 0) {
+      try {
+        const txn = await this.walletService.debit({
+          userId: buyerId,
+          amount: plan.earned,
+          bucket: WalletBucket.Earned,
+          type: WalletTxnType.PurchaseRedemption,
+          description: `Wallet credit (earned) applied to order ${order.orderNumber}`,
+          orderId: order._id,
+          idempotencyKey: `redeem:${order._id}:earned`,
+        });
+        debitedEarned = txn.amount;
+        if (!firstTxnId) firstTxnId = txn._id as Types.ObjectId;
+      } catch (err) {
+        this.logger.warn(
+          `COD earned debit failed for ${order.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
+
+    const debitedTotal = debitedPromo + debitedEarned;
+    if (debitedTotal <= 0) return;
+
+    order.walletCreditApplied = debitedTotal;
+    order.walletCreditBreakdown = { promo: debitedPromo, earned: debitedEarned };
+    if (firstTxnId) order.walletRedemptionTxnId = firstTxnId;
+    order.totalAmount = order.totalAmount - debitedTotal;
+    await order.save();
+  }
+
+  /**
+   * ONLINE confirm: debit the wallet for the credit that was RESERVED on the
+   * order at creation. Lenient — the buyer has already been charged the
+   * reduced amount, so if the balance dropped since reservation we debit what
+   * is available and log the (bounded) shortfall the platform absorbs. Never
+   * throws (money has already moved) and is idempotent via the redeem keys.
+   */
+  private async settleReservedCredit(
+    order: OrderDocument,
+    buyerId: string,
+  ): Promise<void> {
+    if (!(order.walletCreditApplied > 0)) return;
+    if (order.walletRedemptionTxnId) return; // already settled
+
+    const breakdown = order.walletCreditBreakdown || { promo: 0, earned: 0 };
+    const balance = await this.walletService.getBalance(buyerId);
+
+    const promo = Math.min(
+      Math.max(0, breakdown.promo || 0),
+      balance.promoBalance,
+    );
+    const earned = Math.min(
+      Math.max(0, breakdown.earned || 0),
+      balance.earnedBalance,
+    );
+
+    let firstTxnId: Types.ObjectId | undefined;
+    let debited = 0;
+
+    if (promo > 0) {
+      try {
+        const txn = await this.walletService.debit({
+          userId: buyerId,
+          amount: promo,
+          bucket: WalletBucket.Promo,
+          type: WalletTxnType.PurchaseRedemption,
+          description: `Wallet credit (promo) applied to order ${order.orderNumber}`,
+          orderId: order._id,
+          idempotencyKey: `redeem:${order._id}:promo`,
+        });
+        firstTxnId = txn._id as Types.ObjectId;
+        debited += txn.amount;
+      } catch (err) {
+        this.logger.error(
+          `Settle promo debit failed for ${order.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
+
+    if (earned > 0) {
+      try {
+        const txn = await this.walletService.debit({
+          userId: buyerId,
+          amount: earned,
+          bucket: WalletBucket.Earned,
+          type: WalletTxnType.PurchaseRedemption,
+          description: `Wallet credit (earned) applied to order ${order.orderNumber}`,
+          orderId: order._id,
+          idempotencyKey: `redeem:${order._id}:earned`,
+        });
+        if (!firstTxnId) firstTxnId = txn._id as Types.ObjectId;
+        debited += txn.amount;
+      } catch (err) {
+        this.logger.error(
+          `Settle earned debit failed for ${order.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
+
+    if (debited < order.walletCreditApplied) {
+      this.logger.error(
+        `Wallet redemption shortfall on ${order.orderNumber}: reserved ` +
+          `${order.walletCreditApplied} but only debited ${debited} kobo ` +
+          `(balance dropped since reservation; platform absorbs the difference).`,
+      );
+    }
+
+    if (firstTxnId) {
+      order.walletRedemptionTxnId = firstTxnId;
+      await order.save();
+    }
+  }
+
+  /**
+   * Reverse any wallet-credit debit tied to an order (idempotent). Called
+   * whenever the order does not complete: cancelled / refunded / failed.
+   */
+  private async reverseOrderCredit(
+    order: OrderDocument,
+    reason: string,
+  ): Promise<void> {
+    if (!(order?.walletCreditApplied > 0)) return;
+    try {
+      await this.walletService.reverseOrderRedemptions(
+        order._id.toString(),
+        reason,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to reverse wallet credit for ${order.orderNumber}: ${err?.message}`,
+      );
+    }
+  }
 
   // ─── Helpers ─────────────────────────────────────────────
 
@@ -226,7 +509,14 @@ export class OrdersService {
     buyerId: string,
     createOrderDto: CreateOrderDto,
   ): Promise<OrderDocument> {
-    const { listingId, quantity, shippingAddress, buyerNote } = createOrderDto;
+    const {
+      listingId,
+      quantity,
+      shippingAddress,
+      buyerNote,
+      applyWalletCredit,
+      walletCreditAmount,
+    } = createOrderDto;
 
     // Fetch the listing
     const listing = await this.listingsService.findById(listingId);
@@ -264,6 +554,29 @@ export class OrdersService {
 
     const split = this.calculateRevenueSplit(listing, quantity);
 
+    // ─── Affiliate attribution (optional, never blocks checkout) ──
+    let affiliateSnapshot: Record<string, any> = {};
+    if (createOrderDto.affiliateCodes) {
+      try {
+        const attributions = await this.affiliateService.resolveAttributions(
+          buyerId,
+          [
+            {
+              listingId: listing._id.toString(),
+              totalPrice: split.totalAmount,
+            },
+          ],
+          createOrderDto.affiliateCodes,
+        );
+        const attr = attributions.get(listing._id.toString());
+        if (attr) affiliateSnapshot = { ...attr };
+      } catch (err) {
+        this.logger.warn(
+          `Affiliate attribution skipped for listing ${listing._id}: ${err?.message}`,
+        );
+      }
+    }
+
     // ─── Create order ──────────────────────────────────────
 
     const order = new this.orderModel({
@@ -281,6 +594,7 @@ export class OrdersService {
           totalPrice: split.totalAmount,
           type: listing.type,
           image: listing.media?.[0]?.url || null,
+          ...affiliateSnapshot,
         },
       ],
       subtotal: split.totalAmount,
@@ -302,10 +616,53 @@ export class OrdersService {
         split.sellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
     });
 
-    const saved = await order.save();
+    let saved: OrderDocument = await order.save();
+
+    // ─── Wallet credit (opt-in, ONLINE) ─────────────────────
+    // Reduce the amount the payment provider will be asked to charge. The
+    // wallet is debited later in confirmPayment (after the money lands), so an
+    // abandoned/unpaid order never touches the wallet.
+    const wantsCredit =
+      applyWalletCredit === true || (walletCreditAmount ?? 0) > 0;
+    if (wantsCredit) {
+      try {
+        const plan = await this.computeCreditPlan(
+          buyerId,
+          saved.totalAmount,
+          walletCreditAmount,
+        );
+        if (plan.total > 0) {
+          this.reserveCreditOnOrder(saved, plan.promo, plan.earned);
+          saved = await saved.save();
+        }
+      } catch (err) {
+        // Reservation only reduces the charge (no debit yet); if it fails we
+        // leave the order at full price rather than risk a wrong charge.
+        this.logger.warn(
+          `Wallet credit reservation skipped for ${saved.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
 
     // In-app alerts: notify the store owner(s) + buyer that an order exists.
     await this.notifyOrderCreated(saved);
+
+    // If credit fully covers the order (nothing left for the provider),
+    // confirm it immediately — there is no online payment to initialise.
+    if (saved.walletCreditApplied > 0 && saved.totalAmount <= 0) {
+      try {
+        saved = await this.confirmPayment(
+          saved._id.toString(),
+          `WALLET-${saved._id}`,
+          `WALLET-${saved._id}`,
+          'wallet_credit',
+        );
+      } catch (err) {
+        this.logger.error(
+          `Auto-confirm of fully-credited order ${saved.orderNumber} failed: ${err?.message}`,
+        );
+      }
+    }
 
     return saved;
   }
@@ -342,8 +699,32 @@ export class OrdersService {
     receiptEmail?: string,
     deliveryFee: number = 0,
     notifyBuyer: boolean = true,
+    walletCredit?:
+      | { mode: 'reserve'; promo: number; earned: number }
+      | { mode: 'immediate'; capKobo?: number },
+    affiliateCodes?: Record<string, string>,
   ): Promise<OrderDocument> {
     const subtotal = items.reduce((sum, i) => sum + i.totalPrice, 0);
+
+    // ─── Affiliate attribution (optional, never blocks checkout) ──
+    // Resolve each item's code to a commission snapshot keyed by listingId.
+    let affiliateByListing = new Map<string, any>();
+    if (affiliateCodes) {
+      try {
+        affiliateByListing = await this.affiliateService.resolveAttributions(
+          buyerId,
+          items.map((i) => ({
+            listingId: i.listingId,
+            totalPrice: i.totalPrice,
+          })),
+          affiliateCodes,
+        );
+      } catch (err) {
+        this.logger.warn(
+          `Affiliate attribution skipped for cart order: ${err?.message}`,
+        );
+      }
+    }
 
     // Calculate combined revenue split for the order
     let totalPlatformFee = 0;
@@ -394,6 +775,8 @@ export class OrdersService {
         sellerId: new Types.ObjectId(i.sellerId),
         creatorId: new Types.ObjectId(i.creatorId),
         commissionRate: i.commissionRate,
+        // Affiliate snapshot (spread only when the code resolved).
+        ...(affiliateByListing.get(String(i.listingId)) || {}),
       })),
       subtotal,
       shippingFee: deliveryFee,
@@ -415,7 +798,35 @@ export class OrdersService {
         totalSellerPayout > 0 ? 'awaiting_completion' : 'not_applicable',
     });
 
-    const saved = await order.save();
+    let saved = await order.save();
+
+    // ─── Wallet credit (opt-in) ─────────────────────────────
+    // - reserve   (online cart session): reduce the stored payable now; the
+    //   wallet is debited later in confirmPayment, after payment lands.
+    // - immediate (pay-on-delivery): debit the wallet now and reduce what is
+    //   collected on delivery.
+    if (walletCredit) {
+      try {
+        if (walletCredit.mode === 'reserve') {
+          this.reserveCreditOnOrder(
+            saved,
+            walletCredit.promo,
+            walletCredit.earned,
+          );
+          saved = await saved.save();
+        } else {
+          await this.applyCreditImmediate(
+            saved,
+            buyerId,
+            walletCredit.capKobo,
+          );
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Wallet credit application skipped for ${saved.orderNumber}: ${err?.message}`,
+        );
+      }
+    }
 
     // In-app alerts: notify each distinct store owner + (optionally) the buyer.
     // COD passes notifyBuyer=false — it sends its own COD-specific "order
@@ -441,6 +852,8 @@ export class OrdersService {
     buyerNote?: string,
     receiptEmail?: string,
     deliveryFee: number = 0,
+    walletCredit?: { apply: boolean; capKobo?: number },
+    affiliateCodes?: Record<string, string>,
   ): Promise<OrderDocument> {
     const order = await this.createCartOrder(
       buyerId,
@@ -450,6 +863,10 @@ export class OrdersService {
       receiptEmail,
       deliveryFee,
       false, // buyer OrderPlaced alert is sent below (COD-specific copy)
+      walletCredit?.apply
+        ? { mode: 'immediate', capKobo: walletCredit.capKobo }
+        : undefined,
+      affiliateCodes,
     );
 
     // Stays PENDING, not Confirmed. Nothing has been paid and nobody has
@@ -605,6 +1022,7 @@ export class OrdersService {
     orderId: string,
     paymentReference: string,
     paystackReference: string,
+    method: string = 'paystack',
   ): Promise<OrderDocument> {
     const order = await this.orderModel.findById(orderId).exec();
 
@@ -620,7 +1038,7 @@ export class OrdersService {
     order.paymentStatus = PaymentStatus.Success;
     order.status = OrderStatus.Confirmed;
     order.paymentInfo = {
-      method: 'paystack',
+      method,
       reference: paymentReference,
       paystackReference,
       paidAt: new Date(),
@@ -628,6 +1046,18 @@ export class OrdersService {
     };
 
     const updatedOrder = await order.save();
+
+    // ─── Settle any reserved wallet credit (ONLINE paths) ───
+    // The buyer was already charged the reduced amount; debit the wallet now.
+    // Lenient + idempotent — never fails the confirmation.
+    await this.settleReservedCredit(
+      updatedOrder,
+      updatedOrder.buyerId.toString(),
+    ).catch((err) =>
+      this.logger.error(
+        `settleReservedCredit failed for ${updatedOrder.orderNumber}: ${err?.message}`,
+      ),
+    );
 
     // Update listing stock per item
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1044,6 +1474,57 @@ export class OrdersService {
     if (cancellationReason) order.cancellationReason = cancellationReason;
 
     const savedOrder = await order.save();
+
+    // ─── Reverse wallet credit if the order did not complete ─
+    // Idempotent — safe to call even if no credit was applied or it was
+    // already reversed. Covers admin cancellation and (future) refunds.
+    if (
+      status === OrderStatus.Cancelled ||
+      status === OrderStatus.Refunded
+    ) {
+      const reversalReason =
+        status === OrderStatus.Refunded
+          ? `Order ${savedOrder.orderNumber} refunded`
+          : `Order ${savedOrder.orderNumber} cancelled`;
+      await this.reverseOrderCredit(savedOrder, reversalReason);
+
+      // ─── Affiliate: reverse/cancel this order's commissions ──
+      // Fire-and-forget + self-contained — never breaks the status change.
+      this.affiliateService
+        .reverseForOrder(savedOrder._id.toString(), reversalReason)
+        .catch((err) =>
+          this.logger.error(
+            `affiliate reverseForOrder failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
+    }
+
+    // ─── Referral: check the buyer's cumulative spend on completion ─
+    // Fire-and-forget + fully self-contained try-catch inside the service, so
+    // it can never break order completion. Rewards the referrer only if this
+    // buyer was referred, is phone-verified and crosses the spend threshold.
+    if (status === OrderStatus.Completed) {
+      this.referralsService
+        .recordCompletedOrder(
+          savedOrder.buyerId.toString(),
+          savedOrder.totalAmount,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `recordCompletedOrder failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
+
+      // ─── Affiliate: create held commissions for attributed items ──
+      // Fire-and-forget + self-contained — never breaks order completion.
+      this.affiliateService
+        .processOrderCompletion(savedOrder)
+        .catch((err) =>
+          this.logger.error(
+            `affiliate processOrderCompletion failed for ${savedOrder.orderNumber}: ${err?.message}`,
+          ),
+        );
+    }
 
     // Notify buyer about status change (fire and forget)
     const populatedOrder = await this.orderModel

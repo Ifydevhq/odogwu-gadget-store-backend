@@ -20,13 +20,15 @@ const contants_1 = require("../config/contants");
 const notifications_service_1 = require("../notifications/notifications.service");
 const alerts_service_1 = require("../alerts/alerts.service");
 const contants_2 = require("../config/contants");
+const referrals_service_1 = require("../referrals/referrals.service");
 let AuthService = class AuthService {
-    constructor(usersService, jwtService, configService, notificationsService, alertsService) {
+    constructor(usersService, jwtService, configService, notificationsService, alertsService, referralsService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
         this.configService = configService;
         this.notificationsService = notificationsService;
         this.alertsService = alertsService;
+        this.referralsService = referralsService;
         this.tokenBlacklist = new Set();
     }
     generateOTP() {
@@ -52,14 +54,31 @@ let AuthService = class AuthService {
         const otp = this.generateOTP();
         const verificationExpires = new Date();
         verificationExpires.setMinutes(verificationExpires.getMinutes() + 10);
+        const { referralCode, ...registerData } = registerDto;
+        let referredBy;
+        if (referralCode) {
+            try {
+                const referrer = await this.usersService.findByReferralCode(referralCode);
+                if (referrer)
+                    referredBy = referrer._id.toString();
+            }
+            catch {
+            }
+        }
         const user = await this.usersService.create({
-            ...registerDto,
+            ...registerData,
+            referredBy,
             authProvider: contants_1.AuthProvider.Local,
             verificationCode: otp,
             verificationExpires,
         });
         if (!user) {
             throw new common_1.InternalServerErrorException('Failed to create user');
+        }
+        if (referredBy) {
+            this.referralsService
+                .registerReferral(referredBy, user._id.toString())
+                .catch(() => { });
         }
         this.notificationsService.sendVerificationOtp(user.email, registerDto.firstName, otp);
         const { password, verificationCode, verificationExpires: vExp, ...userData } = user.toObject();
@@ -231,6 +250,7 @@ exports.AuthService = AuthService = __decorate([
         jwt_1.JwtService,
         config_1.ConfigService,
         notifications_service_1.NotificationsService,
-        alerts_service_1.AlertsService])
+        alerts_service_1.AlertsService,
+        referrals_service_1.ReferralsService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

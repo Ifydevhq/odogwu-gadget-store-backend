@@ -142,4 +142,38 @@ __decorate([
     (0, class_validator_1.IsIn)(['paystack', 'opay', 'pay_on_delivery']),
     __metadata("design:type", String)
 ], CheckoutCartDto.prototype, "paymentMethod", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Opt in to pay part of this checkout with wallet/store credit. When ' +
+            'true, the server applies the maximum redeemable credit and reduces the ' +
+            'amount charged to the provider (or collected on delivery). Absent/' +
+            'false = no credit applied (unchanged behaviour).',
+        example: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CheckoutCartDto.prototype, "applyWalletCredit", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Optional cap (kobo) on wallet credit to apply. A positive value also ' +
+            'opts the checkout in. Never exceeds the redeemable maximum or the total.',
+        example: 50000,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], CheckoutCartDto.prototype, "walletCreditAmount", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Optional map of listingId -> affiliate code. Resolved per item at ' +
+            'order build time; invalid entries are ignored and never block checkout.',
+        example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsObject)(),
+    __metadata("design:type", Object)
+], CheckoutCartDto.prototype, "affiliateCodes", void 0);
 //# sourceMappingURL=cart.dto.js.map

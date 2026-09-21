@@ -57,7 +57,7 @@ export declare class CartService {
         totalItems: number;
         issues: any[];
     }>;
-    checkout(userId: string, email: string, shippingAddress: any, listingIds?: string[], buyerNote?: string, callbackUrl?: string, deliveryFee?: number, paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery'): Promise<{
+    checkout(userId: string, email: string, shippingAddress: any, listingIds?: string[], buyerNote?: string, callbackUrl?: string, deliveryFee?: number, paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery', applyWalletCredit?: boolean, walletCreditAmount?: number, affiliateCodes?: Record<string, string>): Promise<{
         paymentMethod: string;
         codOrder: boolean;
         order: {
@@ -67,8 +67,28 @@ export declare class CartService {
             itemCount: number;
         };
         grandTotal: any;
+        walletCreditApplied: number;
+        amountDue: number;
         itemCount: number;
         skippedItems: any[];
+        walletFunded?: undefined;
+        sessionId?: undefined;
+        payment?: undefined;
+    } | {
+        paymentMethod: string;
+        walletFunded: boolean;
+        order: {
+            _id: any;
+            orderNumber: string;
+            totalAmount: number;
+            itemCount: number;
+        };
+        grandTotal: any;
+        walletCreditApplied: number;
+        amountDue: number;
+        itemCount: number;
+        skippedItems: any[];
+        codOrder?: undefined;
         sessionId?: undefined;
         payment?: undefined;
     } | {
@@ -78,13 +98,16 @@ export declare class CartService {
             authorizationUrl: any;
             accessCode: any;
             reference: any;
-            grandTotal: any;
+            grandTotal: number;
         };
+        walletCreditApplied: number;
         itemCount: number;
         skippedItems: any[];
         codOrder?: undefined;
         order?: undefined;
         grandTotal?: undefined;
+        amountDue?: undefined;
+        walletFunded?: undefined;
     }>;
     fulfillCheckoutSession(sessionId: string, paymentReference: string, paystackReference: string): Promise<{
         alreadyFulfilled: boolean;

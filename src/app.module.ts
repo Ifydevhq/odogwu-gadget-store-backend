@@ -51,6 +51,11 @@ import { AlertsModule } from './alerts/alerts.module';
 import { ChatModule } from './chat/chat.module';
 import { PushModule } from './push/push.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { WalletModule } from './wallet/wallet.module';
+import { PhoneVerificationModule } from './phone-verification/phone-verification.module';
+import { ReferralsModule } from './referrals/referrals.module';
+import { AffiliateModule } from './affiliate/affiliate.module';
+import { WithdrawalsModule } from './withdrawals/withdrawals.module';
 
 @Module({
   imports: [
@@ -121,6 +126,11 @@ import { AnnouncementsModule } from './announcements/announcements.module';
     ChatModule,
     PushModule,
     AnnouncementsModule,
+    WalletModule,
+    PhoneVerificationModule,
+    ReferralsModule,
+    AffiliateModule,
+    WithdrawalsModule,
   ],
   controllers: [AppController],
 })

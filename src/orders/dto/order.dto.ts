@@ -14,9 +14,11 @@
 
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+  IsBoolean,
   IsEnum,
   IsNotEmpty,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   Min,
@@ -97,6 +99,44 @@ export class CreateOrderDto {
   @IsString()
   @IsOptional()
   buyerNote?: string;
+
+  // ─── Wallet credit (opt-in) ──────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Opt in to pay part of this order with wallet/store credit. When true, ' +
+      'the server applies the maximum redeemable credit (promo capped at the ' +
+      'platform %, earned uncapped) and reduces the amount charged to the ' +
+      'payment provider. Absent/false = no credit applied.',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  applyWalletCredit?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional cap (kobo) on how much wallet credit to apply. Presence of a ' +
+      'positive value also opts the order in. Never exceeds the redeemable ' +
+      'maximum or the order total.',
+    example: 50000,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  walletCreditAmount?: number;
+
+  // ─── Affiliate attribution ───────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Optional map of listingId -> affiliate code. When a code resolves to a ' +
+      'valid affiliate (not the buyer) and the listing has affiliate enabled, ' +
+      'the commission is snapshotted onto the order item. Invalid entries are ' +
+      'silently ignored and never block checkout.',
+    example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+  })
+  @IsObject()
+  @IsOptional()
+  affiliateCodes?: Record<string, string>;
 }
 
 // ═══════════════════════════════════════════════════════════════

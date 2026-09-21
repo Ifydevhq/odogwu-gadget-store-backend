@@ -35,13 +35,55 @@ let UsersService = class UsersService {
         const user = new this.userModel({
             ...createUserDto,
             password: hashedPassword,
+            referralCode: await this.generateUniqueReferralCode(),
         });
         return user.save();
+    }
+    generateReferralCode(length = 8) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let out = '';
+        for (let i = 0; i < length; i++) {
+            out += chars[Math.floor(Math.random() * chars.length)];
+        }
+        return out;
+    }
+    async generateUniqueReferralCode() {
+        for (let i = 0; i < 10; i++) {
+            const code = this.generateReferralCode();
+            const exists = await this.userModel.exists({ referralCode: code }).exec();
+            if (!exists)
+                return code;
+        }
+        return this.generateReferralCode(10);
+    }
+    async findByReferralCode(code) {
+        if (!code)
+            return null;
+        return this.userModel
+            .findOne({ referralCode: code.trim().toUpperCase() })
+            .exec();
+    }
+    async ensureReferralCode(user) {
+        if (user.referralCode)
+            return user;
+        user.referralCode = await this.generateUniqueReferralCode();
+        try {
+            await user.save();
+        }
+        catch {
+            const fresh = await this.userModel.findById(user._id).exec();
+            if (fresh?.referralCode)
+                user.referralCode = fresh.referralCode;
+        }
+        return user;
     }
     async findById(id) {
         const user = await this.userModel.findById(id).exec();
         if (!user) {
             throw new common_1.NotFoundException('User not found');
+        }
+        if (!user.referralCode) {
+            await this.ensureReferralCode(user);
         }
         return user;
     }
@@ -89,6 +131,35 @@ let UsersService = class UsersService {
     }
     async countUsers(filter = {}) {
         return this.userModel.countDocuments(filter).exec();
+    }
+    async findVerifiedByPhoneE164(phoneE164) {
+        return this.userModel
+            .findOne({ phoneE164, isPhoneVerified: true })
+            .exec();
+    }
+    async setPhoneVerified(userId, phoneE164) {
+        const user = await this.userModel
+            .findByIdAndUpdate(userId, {
+            $set: {
+                isPhoneVerified: true,
+                phoneE164,
+                phoneVerifiedAt: new Date(),
+                'mobile.phoneNumber': phoneE164,
+                'mobile.isoCode': 'NG',
+            },
+        }, { new: true, runValidators: true })
+            .exec();
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user;
+    }
+    async isRewardEligible(userId) {
+        const user = await this.userModel
+            .findById(userId)
+            .select('isPhoneVerified')
+            .exec();
+        return user?.isPhoneVerified === true;
     }
     async deleteAccount(userId, password) {
         const user = await this.userModel

@@ -46,6 +46,15 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], RegisterDto.prototype, "avatar", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        example: 'AB12CD34',
+        description: "Referrer's referral code (optional). Invalid codes are ignored.",
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], RegisterDto.prototype, "referralCode", void 0);
 class LoginDto {
 }
 exports.LoginDto = LoginDto;

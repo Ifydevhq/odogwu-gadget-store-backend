@@ -65,6 +65,11 @@ class OrderItem {
   sellerId: Types.ObjectId; // Who listed it
   creatorId: Types.ObjectId; // The creator profile
   commissionRate: number; // Commission % for revenue split
+  // ─── Affiliate attribution (snapshot at order time) ──────
+  affiliateCode?: string; // The affiliate's referral code used at checkout
+  affiliateUserId?: Types.ObjectId; // Resolved affiliate user
+  affiliateCommissionPercent?: number; // % applied for this item
+  affiliateCommissionAmount?: number; // Computed commission (kobo)
 }
 
 class ShippingAddress {
@@ -146,6 +151,11 @@ export class Order extends BaseSchema {
         sellerId: { type: Types.ObjectId, ref: 'User' },
         creatorId: { type: Types.ObjectId, ref: 'Creator' },
         commissionRate: { type: Number, default: 15 },
+        // Affiliate attribution snapshot (all optional).
+        affiliateCode: { type: String, default: null },
+        affiliateUserId: { type: Types.ObjectId, ref: 'User', default: null },
+        affiliateCommissionPercent: { type: Number, default: null },
+        affiliateCommissionAmount: { type: Number, default: null },
       },
     ],
     required: true,
@@ -267,6 +277,31 @@ export class Order extends BaseSchema {
 
   @Prop({ type: String, default: null })
   cancellationReason?: string;
+
+  // ─── Wallet credit redemption (opt-in) ───────────────────
+  // How much store credit (kobo) was applied to reduce what the buyer
+  // pays to the provider / on delivery. 0 (default) means no credit used —
+  // byte-for-byte unchanged from the pre-wallet behaviour.
+
+  @Prop({ type: Number, default: 0 })
+  walletCreditApplied?: number;
+
+  // Split of the applied credit across buckets (kobo).
+  @Prop({
+    type: {
+      promo: { type: Number, default: 0 },
+      earned: { type: Number, default: 0 },
+    },
+    default: null,
+  })
+  walletCreditBreakdown?: { promo: number; earned: number };
+
+  // Primary wallet ledger row for the redemption debit (for tracking).
+  // Reversal reverses ALL purchase_redemption rows for this order via
+  // WalletService.reverseOrderRedemptions(), so it is robust to the
+  // two-bucket (promo + earned) case.
+  @Prop({ type: Types.ObjectId, default: null })
+  walletRedemptionTxnId?: Types.ObjectId;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

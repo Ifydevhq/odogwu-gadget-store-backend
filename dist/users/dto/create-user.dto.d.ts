@@ -17,6 +17,7 @@ export declare class CreateUserDto {
     state?: string;
     city?: string;
     bio?: string;
+    referredBy?: string;
     isEmailVerified?: boolean;
     verificationCode?: string;
     verificationExpires?: Date;

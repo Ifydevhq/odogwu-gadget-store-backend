@@ -8,6 +8,10 @@ export declare class UsersService {
     private userModel;
     constructor(userModel: Model<UserDocument>);
     create(createUserDto: CreateUserDto): Promise<UserDocument>;
+    private generateReferralCode;
+    generateUniqueReferralCode(): Promise<string>;
+    findByReferralCode(code: string): Promise<UserDocument | null>;
+    ensureReferralCode(user: UserDocument): Promise<UserDocument>;
     findById(id: string): Promise<UserDocument>;
     findByEmail(email: string): Promise<UserDocument | null>;
     getProfile(userId: string): Promise<UserDocument>;
@@ -15,6 +19,9 @@ export declare class UsersService {
     updateInternal(userId: string, update: Partial<User>): Promise<UserDocument>;
     findByResetToken(token: string): Promise<UserDocument | null>;
     countUsers(filter?: Record<string, any>): Promise<number>;
+    findVerifiedByPhoneE164(phoneE164: string): Promise<UserDocument | null>;
+    setPhoneVerified(userId: string, phoneE164: string): Promise<UserDocument>;
+    isRewardEligible(userId: string): Promise<boolean>;
     deleteAccount(userId: string, password: string): Promise<void>;
     changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<void>;
     updateNotificationPreferences(userId: string, updateDto: UpdateNotificationPreferencesDto): Promise<UserDocument>;

@@ -4,6 +4,7 @@ export declare class RegisterDto {
     email: string;
     password: string;
     avatar?: string;
+    referralCode?: string;
 }
 export declare class LoginDto {
     email: string;

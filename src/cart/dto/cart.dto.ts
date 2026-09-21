@@ -7,6 +7,8 @@ import {
   IsString,
   IsArray,
   IsIn,
+  IsBoolean,
+  IsObject,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
@@ -115,4 +117,40 @@ export class CheckoutCartDto {
   @IsString()
   @IsIn(['paystack', 'opay', 'pay_on_delivery'])
   paymentMethod?: 'paystack' | 'opay' | 'pay_on_delivery';
+
+  // ─── Wallet credit (opt-in) ──────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Opt in to pay part of this checkout with wallet/store credit. When ' +
+      'true, the server applies the maximum redeemable credit and reduces the ' +
+      'amount charged to the provider (or collected on delivery). Absent/' +
+      'false = no credit applied (unchanged behaviour).',
+    example: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  applyWalletCredit?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Optional cap (kobo) on wallet credit to apply. A positive value also ' +
+      'opts the checkout in. Never exceeds the redeemable maximum or the total.',
+    example: 50000,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  walletCreditAmount?: number;
+
+  // ─── Affiliate attribution ───────────────────────────────
+  @ApiPropertyOptional({
+    description:
+      'Optional map of listingId -> affiliate code. Resolved per item at ' +
+      'order build time; invalid entries are ignored and never block checkout.',
+    example: { '65e5f6a7b8c9d0e1f2a3b4c5': 'AB12CD' },
+  })
+  @IsOptional()
+  @IsObject()
+  affiliateCodes?: Record<string, string>;
 }
