@@ -392,9 +392,12 @@ export class OrdersService {
       listing.askingPrice.amount;
     const totalAmount = unitPrice * quantity;
 
-    if (listing.type === ListingType.DirectPurchase) {
-      // Comaket owns the item — entire amount is platform revenue
-      // Seller was already paid at purchasePrice when item was acquired
+    if (
+      listing.type === ListingType.DirectPurchase ||
+      listing.type === ListingType.Admin
+    ) {
+      // Platform-owned inventory (direct_purchase or admin-created) — the
+      // entire amount is platform revenue; nothing is disbursed to a seller.
       return {
         unitPrice,
         totalAmount,
@@ -760,7 +763,8 @@ export class OrdersService {
     let totalSellerPayout = 0;
 
     for (const item of items) {
-      if (item.type === 'direct_purchase') {
+      if (item.type === 'direct_purchase' || item.type === 'admin') {
+        // Platform-owned inventory — entire amount is platform revenue.
         totalPlatformFee += item.totalPrice;
       } else {
         // consignment

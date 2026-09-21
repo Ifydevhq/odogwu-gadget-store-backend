@@ -23,11 +23,27 @@ const response_message_decorator_1 = require("../common/decorators/response-mess
 const contants_1 = require("../config/contants");
 const withdrawals_service_1 = require("./withdrawals.service");
 const create_withdrawal_dto_1 = require("./dto/create-withdrawal.dto");
+const save_bank_account_dto_1 = require("./dto/save-bank-account.dto");
 const process_withdrawal_dto_1 = require("./dto/process-withdrawal.dto");
 const query_withdrawals_dto_1 = require("./dto/query-withdrawals.dto");
 let WithdrawalsController = class WithdrawalsController {
     constructor(withdrawalsService) {
         this.withdrawalsService = withdrawalsService;
+    }
+    async sendOtp(userId) {
+        return this.withdrawalsService.sendOtp(userId);
+    }
+    async verifyOtp(userId, otp) {
+        return this.withdrawalsService.verifyOtp(userId, otp);
+    }
+    async listBankAccounts(userId) {
+        return this.withdrawalsService.listBankAccounts(userId);
+    }
+    async saveBankAccount(userId, dto) {
+        return this.withdrawalsService.saveBankAccount(userId, dto);
+    }
+    async deleteBankAccount(userId, id) {
+        return this.withdrawalsService.deleteBankAccount(userId, id);
     }
     async request(userId, dto) {
         return this.withdrawalsService.request(userId, dto);
@@ -37,6 +53,58 @@ let WithdrawalsController = class WithdrawalsController {
     }
 };
 exports.WithdrawalsController = WithdrawalsController;
+__decorate([
+    (0, common_1.Post)('send-otp'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Email a 6-digit code to authorize opening the withdrawal view',
+    }),
+    (0, response_message_decorator_1.ResponseMessage)('Verification code sent to your email'),
+    __param(0, (0, get_user_decorator_1.GetUser)('sub')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WithdrawalsController.prototype, "sendOtp", null);
+__decorate([
+    (0, common_1.Post)('verify-otp'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Check the emailed code to unlock the withdrawal view (no consume)',
+    }),
+    (0, response_message_decorator_1.ResponseMessage)('Code verified'),
+    __param(0, (0, get_user_decorator_1.GetUser)('sub')),
+    __param(1, (0, common_1.Body)('otp')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], WithdrawalsController.prototype, "verifyOtp", null);
+__decorate([
+    (0, common_1.Get)('bank-accounts'),
+    (0, swagger_1.ApiOperation)({ summary: 'List the current user saved payout bank accounts' }),
+    (0, response_message_decorator_1.ResponseMessage)('Saved bank accounts retrieved successfully'),
+    __param(0, (0, get_user_decorator_1.GetUser)('sub')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WithdrawalsController.prototype, "listBankAccounts", null);
+__decorate([
+    (0, common_1.Post)('bank-accounts'),
+    (0, swagger_1.ApiOperation)({ summary: 'Save a verified payout bank account for next time' }),
+    (0, response_message_decorator_1.ResponseMessage)('Bank account saved successfully'),
+    __param(0, (0, get_user_decorator_1.GetUser)('sub')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, save_bank_account_dto_1.SaveBankAccountDto]),
+    __metadata("design:returntype", Promise)
+], WithdrawalsController.prototype, "saveBankAccount", null);
+__decorate([
+    (0, common_1.Delete)('bank-accounts/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Remove a saved payout bank account' }),
+    (0, response_message_decorator_1.ResponseMessage)('Bank account removed successfully'),
+    __param(0, (0, get_user_decorator_1.GetUser)('sub')),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], WithdrawalsController.prototype, "deleteBankAccount", null);
 __decorate([
     (0, common_1.Post)(),
     (0, swagger_1.ApiOperation)({

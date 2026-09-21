@@ -9,6 +9,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -25,6 +26,7 @@ import { ResponseMessage } from '../common/decorators/response-message.decorator
 import { UserRole } from '../config/contants';
 import { WithdrawalsService } from './withdrawals.service';
 import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { SaveBankAccountDto } from './dto/save-bank-account.dto';
 import { ProcessWithdrawalDto } from './dto/process-withdrawal.dto';
 import { QueryWithdrawalsDto } from './dto/query-withdrawals.dto';
 
@@ -34,6 +36,54 @@ import { QueryWithdrawalsDto } from './dto/query-withdrawals.dto';
 @UseGuards(JwtAuthGuard)
 export class WithdrawalsController {
   constructor(private readonly withdrawalsService: WithdrawalsService) {}
+
+  @Post('send-otp')
+  @ApiOperation({
+    summary: 'Email a 6-digit code to authorize opening the withdrawal view',
+  })
+  @ResponseMessage('Verification code sent to your email')
+  async sendOtp(@GetUser('sub') userId: string) {
+    return this.withdrawalsService.sendOtp(userId);
+  }
+
+  @Post('verify-otp')
+  @ApiOperation({
+    summary: 'Check the emailed code to unlock the withdrawal view (no consume)',
+  })
+  @ResponseMessage('Code verified')
+  async verifyOtp(
+    @GetUser('sub') userId: string,
+    @Body('otp') otp: string,
+  ) {
+    return this.withdrawalsService.verifyOtp(userId, otp);
+  }
+
+  @Get('bank-accounts')
+  @ApiOperation({ summary: 'List the current user saved payout bank accounts' })
+  @ResponseMessage('Saved bank accounts retrieved successfully')
+  async listBankAccounts(@GetUser('sub') userId: string) {
+    return this.withdrawalsService.listBankAccounts(userId);
+  }
+
+  @Post('bank-accounts')
+  @ApiOperation({ summary: 'Save a verified payout bank account for next time' })
+  @ResponseMessage('Bank account saved successfully')
+  async saveBankAccount(
+    @GetUser('sub') userId: string,
+    @Body() dto: SaveBankAccountDto,
+  ) {
+    return this.withdrawalsService.saveBankAccount(userId, dto);
+  }
+
+  @Delete('bank-accounts/:id')
+  @ApiOperation({ summary: 'Remove a saved payout bank account' })
+  @ResponseMessage('Bank account removed successfully')
+  async deleteBankAccount(
+    @GetUser('sub') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.withdrawalsService.deleteBankAccount(userId, id);
+  }
 
   @Post()
   @ApiOperation({

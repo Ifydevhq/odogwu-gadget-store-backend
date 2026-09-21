@@ -219,7 +219,8 @@ let OrdersService = OrdersService_1 = class OrdersService {
             listing.adminPricing?.sellingPrice ||
             listing.askingPrice.amount;
         const totalAmount = unitPrice * quantity;
-        if (listing.type === contants_1.ListingType.DirectPurchase) {
+        if (listing.type === contants_1.ListingType.DirectPurchase ||
+            listing.type === contants_1.ListingType.Admin) {
             return {
                 unitPrice,
                 totalAmount,
@@ -424,7 +425,7 @@ let OrdersService = OrdersService_1 = class OrdersService {
         let totalPlatformFee = 0;
         let totalSellerPayout = 0;
         for (const item of items) {
-            if (item.type === 'direct_purchase') {
+            if (item.type === 'direct_purchase' || item.type === 'admin') {
                 totalPlatformFee += item.totalPrice;
             }
             else {

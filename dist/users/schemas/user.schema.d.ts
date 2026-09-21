@@ -45,6 +45,16 @@ export declare class User extends BaseSchema {
     pushTokens: PushToken[];
     passwordResetToken?: string;
     passwordResetExpires?: Date;
+    savedBankAccounts: {
+        _id?: Types.ObjectId;
+        bankName: string;
+        bankCode: string;
+        accountNumber: string;
+        accountName: string;
+    }[];
+    withdrawalOtpHash?: string;
+    withdrawalOtpExpires?: Date;
+    withdrawalOtpAttempts?: number;
 }
 export declare const UserSchema: import("mongoose").Schema<User, import("mongoose").Model<User, any, any, any, Document<unknown, any, User> & User & {
     _id: Types.ObjectId;

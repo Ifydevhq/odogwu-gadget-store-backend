@@ -10,6 +10,7 @@ export declare class WithdrawalRequest {
     amount: number;
     status: WithdrawalStatus;
     bankName?: string;
+    bankCode?: string;
     accountNumber?: string;
     accountName?: string;
     walletTxnId?: Types.ObjectId;

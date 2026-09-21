@@ -374,6 +374,20 @@ export class ListingsService {
       listing.set('discountPercent', undefined);
     }
 
+    // ─── Normalise legacy pricing so edits actually take effect ──
+    // Price is resolved everywhere as discountPrice || adminPricing.sellingPrice
+    // || askingPrice. Seeded/admin products stored the SELLING price in
+    // discountPrice/adminPricing (and the former price in askingPrice), so
+    // editing askingPrice had no visible effect. When the price changes, make
+    // askingPrice the single source of truth: drop the legacy discountPrice and
+    // sync adminPricing.sellingPrice to the new amount.
+    if (priceChanged) {
+      listing.set('discountPrice', undefined);
+      if (listing.adminPricing) {
+        listing.adminPricing.sellingPrice = sellingAmount;
+      }
+    }
+
     // ─── Fee recalculation (self_listing only) ──────────────
     if (listing.type === ListingType.SelfListing && priceChanged) {
       const freeListing = await this.isFreeListing();

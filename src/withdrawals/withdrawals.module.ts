@@ -17,11 +17,13 @@ import {
   WithdrawalRequest,
   WithdrawalRequestSchema,
 } from './schemas/withdrawal-request.schema';
+import { User, UserSchema } from '../users/schemas/user.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: WithdrawalRequest.name, schema: WithdrawalRequestSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     PlatformSettingsModule,
   ],

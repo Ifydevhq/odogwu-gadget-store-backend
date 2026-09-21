@@ -176,6 +176,32 @@ __decorate([
     (0, mongoose_1.Prop)({ type: Date, select: false }),
     __metadata("design:type", Date)
 ], User.prototype, "passwordResetExpires", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({
+        type: [
+            {
+                bankName: { type: String, required: true },
+                bankCode: { type: String, required: true },
+                accountNumber: { type: String, required: true },
+                accountName: { type: String, required: true },
+            },
+        ],
+        default: [],
+    }),
+    __metadata("design:type", Array)
+], User.prototype, "savedBankAccounts", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ select: false }),
+    __metadata("design:type", String)
+], User.prototype, "withdrawalOtpHash", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Date, select: false }),
+    __metadata("design:type", Date)
+], User.prototype, "withdrawalOtpExpires", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: Number, select: false, default: 0 }),
+    __metadata("design:type", Number)
+], User.prototype, "withdrawalOtpAttempts", void 0);
 exports.User = User = __decorate([
     (0, mongoose_1.Schema)({
         timestamps: true,

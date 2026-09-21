@@ -25,11 +25,26 @@ __decorate([
     __metadata("design:type", Number)
 ], CreateWithdrawalDto.prototype, "amount", void 0);
 __decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'The 6-digit code emailed to the user (send-otp step).',
+        example: '123456',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.Length)(6, 6),
+    __metadata("design:type", String)
+], CreateWithdrawalDto.prototype, "otp", void 0);
+__decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Bank name for the offline payout.' }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateWithdrawalDto.prototype, "bankName", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ description: 'Paystack bank code for the payout bank.' }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateWithdrawalDto.prototype, "bankCode", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ description: 'Account number for the offline payout.' }),
     (0, class_validator_1.IsOptional)(),
@@ -37,9 +52,20 @@ __decorate([
     __metadata("design:type", String)
 ], CreateWithdrawalDto.prototype, "accountNumber", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ description: 'Account holder name for the offline payout.' }),
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Paystack-resolved account holder name for the payout.',
+    }),
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateWithdrawalDto.prototype, "accountName", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({
+        description: 'Save these bank details for next time.',
+        default: false,
+    }),
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], CreateWithdrawalDto.prototype, "saveAccount", void 0);
 //# sourceMappingURL=create-withdrawal.dto.js.map

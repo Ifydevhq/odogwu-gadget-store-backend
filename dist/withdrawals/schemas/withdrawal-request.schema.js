@@ -46,6 +46,10 @@ __decorate([
 __decorate([
     (0, mongoose_1.Prop)({ type: String, default: null }),
     __metadata("design:type", String)
+], WithdrawalRequest.prototype, "bankCode", void 0);
+__decorate([
+    (0, mongoose_1.Prop)({ type: String, default: null }),
+    __metadata("design:type", String)
 ], WithdrawalRequest.prototype, "accountNumber", void 0);
 __decorate([
     (0, mongoose_1.Prop)({ type: String, default: null }),
