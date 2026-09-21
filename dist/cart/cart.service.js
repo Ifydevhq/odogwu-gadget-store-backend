@@ -88,7 +88,7 @@ let CartService = CartService_1 = class CartService {
             .findOne({ userId: new mongoose_2.Types.ObjectId(userId) })
             .populate({
             path: 'items.listingId',
-            select: 'itemName status type condition quantity media askingPrice adminPricing storeId creatorId userId',
+            select: 'itemName status type condition quantity media askingPrice discountPrice formerPrice discountPercent adminPricing storeId creatorId userId',
         })
             .populate({
             path: 'items.storeId',
@@ -494,6 +494,8 @@ let CartService = CartService_1 = class CartService {
                         askingPrice: listing.askingPrice,
                         adminPricing: listing.adminPricing,
                         effectivePrice: livePrice,
+                        formerPrice: listing.formerPrice,
+                        discountPercent: listing.discountPercent,
                     }
                     : null,
                 store: item.storeId?.name

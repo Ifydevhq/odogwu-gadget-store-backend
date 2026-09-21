@@ -144,8 +144,12 @@ export class CartService {
       .findOne({ userId: new Types.ObjectId(userId) })
       .populate({
         path: 'items.listingId',
+        // discountPrice/formerPrice/discountPercent MUST be selected — the cart
+        // resolves the live price as discountPrice || adminPricing.sellingPrice
+        // || askingPrice, so omitting discountPrice made scripted products show
+        // the struck-through (former) price at checkout instead of the discount.
         select:
-          'itemName status type condition quantity media askingPrice adminPricing storeId creatorId userId',
+          'itemName status type condition quantity media askingPrice discountPrice formerPrice discountPercent adminPricing storeId creatorId userId',
       })
       .populate({
         path: 'items.storeId',
@@ -874,6 +878,8 @@ export class CartService {
               askingPrice: listing.askingPrice,
               adminPricing: listing.adminPricing,
               effectivePrice: livePrice,
+              formerPrice: listing.formerPrice,
+              discountPercent: listing.discountPercent,
             }
           : null,
 

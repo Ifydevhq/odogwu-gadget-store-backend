@@ -187,6 +187,12 @@ let ListingsService = class ListingsService {
             listing.set('formerPrice', undefined);
             listing.set('discountPercent', undefined);
         }
+        if (priceChanged) {
+            listing.set('discountPrice', undefined);
+            if (listing.adminPricing) {
+                listing.adminPricing.sellingPrice = sellingAmount;
+            }
+        }
         if (listing.type === contants_1.ListingType.SelfListing && priceChanged) {
             const freeListing = await this.isFreeListing();
             const newFee = await this.calculateListingFee(listing.askingPrice.amount);
