@@ -751,14 +751,15 @@ let OrdersService = OrdersService_1 = class OrdersService {
             ? order.items[0].itemName
             : `${order.items.length} items`;
         this.alertsService
-            .createAlert({
+            .createAlertAndPush({
             userId: order.buyerId.toString(),
             type: contants_2.AlertType.OrderConfirmed,
             title: 'Order Confirmed! ✅',
             message: `Your order #${order.orderNumber} for ${itemsSummary} has been confirmed. We'll notify you when it's being processed.`,
-            entityId: order._id,
+            entityId: order._id.toString(),
             entityType: 'order',
             metadata: { orderNumber: order.orderNumber },
+            route: `/orders/${order._id.toString()}`,
         })
             .catch(() => { });
         return updatedOrder;
