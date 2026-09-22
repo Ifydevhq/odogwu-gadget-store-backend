@@ -469,8 +469,20 @@ export class ChatService {
       this.messageModel.countDocuments(filter).exec(),
     ]);
 
+    // Compute a persisted `isRead` per message (read by someone other than the
+    // sender), so the "seen" tick survives leaving and re-opening the thread —
+    // the raw doc only carries the `readBy` array, which the client can't read.
+    const data = messages.reverse().map((m: any) => ({
+      ...m,
+      isRead:
+        Array.isArray(m.readBy) &&
+        m.readBy.some(
+          (r: any) => r?.toString() !== m.senderId?.toString(),
+        ),
+    }));
+
     return {
-      data: messages.reverse(), // Return in chronological order
+      data, // chronological order
       pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
     };
   }

@@ -24,9 +24,7 @@ export declare class ChatController {
         _id: import("mongoose").Types.ObjectId;
     }>;
     getMessages(user: JwtPayload, conversationId: string, dto: QueryMessagesDto): Promise<{
-        data: (import("mongoose").FlattenMaps<import("./schemas/message.schema").MessageDocument> & {
-            _id: import("mongoose").Types.ObjectId;
-        })[];
+        data: any[];
         pagination: {
             page: number;
             perPage: number;
