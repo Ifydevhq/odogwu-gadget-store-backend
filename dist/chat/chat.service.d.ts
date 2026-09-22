@@ -30,9 +30,7 @@ export declare class ChatService {
         _id: Types.ObjectId;
     }>;
     getMessages(conversationId: string, userId: string, dto: QueryMessagesDto): Promise<{
-        data: (import("mongoose").FlattenMaps<MessageDocument> & {
-            _id: Types.ObjectId;
-        })[];
+        data: any[];
         pagination: {
             page: number;
             perPage: number;

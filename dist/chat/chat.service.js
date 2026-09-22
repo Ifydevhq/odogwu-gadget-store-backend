@@ -364,8 +364,13 @@ let ChatService = ChatService_1 = class ChatService {
                 .exec(),
             this.messageModel.countDocuments(filter).exec(),
         ]);
+        const data = messages.reverse().map((m) => ({
+            ...m,
+            isRead: Array.isArray(m.readBy) &&
+                m.readBy.some((r) => r?.toString() !== m.senderId?.toString()),
+        }));
         return {
-            data: messages.reverse(),
+            data,
             pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
         };
     }
