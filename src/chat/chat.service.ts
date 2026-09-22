@@ -132,8 +132,13 @@ export class ChatService {
         (details && details.avatar) ||
         (populated && (populated.profileImageUrl || populated.avatar));
     } else {
+      // Prefer the live name, then the snapshot displayName stored on the
+      // conversation (participantDetails) — the list endpoint doesn't populate
+      // participants, so without this the customer's name fell back to
+      // "Customer" even though their name was captured at conversation creation.
       name =
         personName ||
+        (details && details.displayName) ||
         (populated && (populated.businessName || populated.username)) ||
         '';
       avatar =

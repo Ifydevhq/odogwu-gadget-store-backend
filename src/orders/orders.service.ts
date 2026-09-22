@@ -1275,16 +1275,17 @@ export class OrdersService {
         ? order.items[0].itemName
         : `${order.items.length} items`;
 
-    // Alert buyer: order confirmed
+    // Alert buyer: order confirmed (push + in-app, like the other statuses).
     this.alertsService
-      .createAlert({
+      .createAlertAndPush({
         userId: order.buyerId.toString(),
         type: AlertType.OrderConfirmed,
         title: 'Order Confirmed! ✅',
         message: `Your order #${order.orderNumber} for ${itemsSummary} has been confirmed. We'll notify you when it's being processed.`,
-        entityId: order._id,
+        entityId: order._id.toString(),
         entityType: 'order',
         metadata: { orderNumber: order.orderNumber },
+        route: `/orders/${order._id.toString()}`,
       })
       .catch(() => {});
 

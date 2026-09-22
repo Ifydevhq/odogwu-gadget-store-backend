@@ -104,6 +104,7 @@ let ChatService = ChatService_1 = class ChatService {
         else {
             name =
                 personName ||
+                    (details && details.displayName) ||
                     (populated && (populated.businessName || populated.username)) ||
                     '';
             avatar =

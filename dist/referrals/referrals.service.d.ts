@@ -37,6 +37,10 @@ export declare class ReferralsService {
             name: string;
             status: ReferralStatus;
             cumulativeQualifyingSpend: number;
+            phoneVerified: boolean;
+            minSpend: number;
+            remainingSpend: number;
+            rewardAmount: number;
             qualifiedAt?: Date;
             rewardedAt?: Date;
             createdAt: Date;

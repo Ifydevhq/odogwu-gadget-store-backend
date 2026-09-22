@@ -60,6 +60,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Broadcast online status to users who share conversations
       this.broadcastOnlineStatus(userId, true);
 
+      // Seed THIS client with everyone already online, so peers who connected
+      // before it don't show as offline until they happen to reconnect.
+      for (const onlineId of this.onlineUsers.keys()) {
+        if (onlineId !== userId) {
+          client.emit('userOnline', { userId: onlineId });
+        }
+      }
+
       // Send initial unread count on connection
       try {
         const unreadCount = await this.chatService.getTotalUnreadCount(userId);

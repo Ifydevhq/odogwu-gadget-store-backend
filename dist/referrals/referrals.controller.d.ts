@@ -16,6 +16,10 @@ export declare class ReferralsController {
             name: string;
             status: import("./schemas/referral.schema").ReferralStatus;
             cumulativeQualifyingSpend: number;
+            phoneVerified: boolean;
+            minSpend: number;
+            remainingSpend: number;
+            rewardAmount: number;
             qualifiedAt?: Date;
             rewardedAt?: Date;
             createdAt: Date;

@@ -42,6 +42,11 @@ let ChatGateway = ChatGateway_1 = class ChatGateway {
             }
             this.onlineUsers.get(userId).add(client.id);
             this.broadcastOnlineStatus(userId, true);
+            for (const onlineId of this.onlineUsers.keys()) {
+                if (onlineId !== userId) {
+                    client.emit('userOnline', { userId: onlineId });
+                }
+            }
             try {
                 const unreadCount = await this.chatService.getTotalUnreadCount(userId);
                 client.emit('unreadCountUpdate', { totalUnread: unreadCount });
