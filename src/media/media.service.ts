@@ -278,6 +278,16 @@ export class MediaService {
       'image/gif',
       'video/mp4',
       'video/quicktime',
+      // Voice notes (chat) — recorders emit m4a/aac/mpeg/webm/ogg/wav.
+      'audio/mp4',
+      'audio/aac',
+      'audio/mpeg',
+      'audio/m4a',
+      'audio/x-m4a',
+      'audio/webm',
+      'audio/ogg',
+      'audio/wav',
+      'audio/x-wav',
     ];
 
     if (!allowedMimes.includes(file.mimetype)) {
@@ -377,14 +387,16 @@ export class MediaService {
     folder: string,
   ): Promise<string> {
     return new Promise((resolve, reject) => {
-      const isVideo = file.mimetype.startsWith('video/');
+      // Cloudinary handles audio under the 'video' resource type.
+      const isVideoOrAudio =
+        file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/');
 
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder,
-          resource_type: isVideo ? 'video' : 'image',
-          // Auto-optimize images
-          ...(isVideo
+          resource_type: isVideoOrAudio ? 'video' : 'image',
+          // Auto-optimize images only
+          ...(isVideoOrAudio
             ? {}
             : {
                 transformation: [{ quality: 'auto', fetch_format: 'auto' }],

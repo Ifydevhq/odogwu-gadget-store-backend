@@ -84,8 +84,10 @@ export class SendMessageDto {
   @IsString()
   content: string;
 
-  @ApiPropertyOptional({ enum: ['text', 'image', 'product_card', 'product'] })
-  @IsEnum(['text', 'image', 'product_card', 'product'])
+  @ApiPropertyOptional({
+    enum: ['text', 'image', 'product_card', 'product', 'voice'],
+  })
+  @IsEnum(['text', 'image', 'product_card', 'product', 'voice'])
   @IsOptional()
   type?: string;
 

@@ -28,7 +28,11 @@ __decorate([
     __metadata("design:type", String)
 ], Message.prototype, "content", void 0);
 __decorate([
-    (0, mongoose_1.Prop)({ type: String, enum: ['text', 'image', 'product_card'], default: 'text' }),
+    (0, mongoose_1.Prop)({
+        type: String,
+        enum: ['text', 'image', 'product_card', 'voice'],
+        default: 'text',
+    }),
     __metadata("design:type", String)
 ], Message.prototype, "type", void 0);
 __decorate([
