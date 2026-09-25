@@ -138,6 +138,15 @@ let MediaService = MediaService_1 = class MediaService {
             'image/gif',
             'video/mp4',
             'video/quicktime',
+            'audio/mp4',
+            'audio/aac',
+            'audio/mpeg',
+            'audio/m4a',
+            'audio/x-m4a',
+            'audio/webm',
+            'audio/ogg',
+            'audio/wav',
+            'audio/x-wav',
         ];
         if (!allowedMimes.includes(file.mimetype)) {
             throw new common_1.BadRequestException(`File type "${file.mimetype}" is not allowed. ` +
@@ -194,11 +203,11 @@ let MediaService = MediaService_1 = class MediaService {
     }
     async uploadToCloudinary(file, folder) {
         return new Promise((resolve, reject) => {
-            const isVideo = file.mimetype.startsWith('video/');
+            const isVideoOrAudio = file.mimetype.startsWith('video/') || file.mimetype.startsWith('audio/');
             const uploadStream = cloudinary_1.v2.uploader.upload_stream({
                 folder,
-                resource_type: isVideo ? 'video' : 'image',
-                ...(isVideo
+                resource_type: isVideoOrAudio ? 'video' : 'image',
+                ...(isVideoOrAudio
                     ? {}
                     : {
                         transformation: [{ quality: 'auto', fetch_format: 'auto' }],

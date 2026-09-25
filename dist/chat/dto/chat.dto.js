@@ -102,8 +102,10 @@ __decorate([
     __metadata("design:type", String)
 ], SendMessageDto.prototype, "content", void 0);
 __decorate([
-    (0, swagger_1.ApiPropertyOptional)({ enum: ['text', 'image', 'product_card', 'product'] }),
-    (0, class_validator_1.IsEnum)(['text', 'image', 'product_card', 'product']),
+    (0, swagger_1.ApiPropertyOptional)({
+        enum: ['text', 'image', 'product_card', 'product', 'voice'],
+    }),
+    (0, class_validator_1.IsEnum)(['text', 'image', 'product_card', 'product', 'voice']),
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", String)
 ], SendMessageDto.prototype, "type", void 0);

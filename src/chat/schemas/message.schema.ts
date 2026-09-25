@@ -14,7 +14,11 @@ export class Message {
   @Prop({ type: String, required: true })
   content: string;
 
-  @Prop({ type: String, enum: ['text', 'image', 'product_card'], default: 'text' })
+  @Prop({
+    type: String,
+    enum: ['text', 'image', 'product_card', 'voice'],
+    default: 'text',
+  })
   type: string;
 
   // For product_card messages
