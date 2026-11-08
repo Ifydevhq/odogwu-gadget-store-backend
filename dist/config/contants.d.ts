@@ -6,7 +6,8 @@ export declare enum UserRole {
 }
 export declare enum AuthProvider {
     Local = "local",
-    Google = "google"
+    Google = "google",
+    Apple = "apple"
 }
 export declare enum CreatorPlan {
     Starter = "starter",

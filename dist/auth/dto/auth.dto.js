@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ResetPasswordDto = exports.ForgotPasswordDto = exports.ResendVerificationDto = exports.VerifyEmailDto = exports.GoogleAuthDto = exports.LoginDto = exports.RegisterDto = void 0;
+exports.ResetPasswordDto = exports.ForgotPasswordDto = exports.ResendVerificationDto = exports.VerifyEmailDto = exports.AppleAuthDto = exports.GoogleAuthDto = exports.LoginDto = exports.RegisterDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
 const class_validator_1 = require("class-validator");
 class RegisterDto {
@@ -81,6 +81,36 @@ __decorate([
     (0, class_validator_1.IsNotEmpty)(),
     __metadata("design:type", String)
 ], GoogleAuthDto.prototype, "token", void 0);
+class AppleAuthDto {
+}
+exports.AppleAuthDto = AppleAuthDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Apple identity token (JWT) returned by Sign in with Apple',
+        example: 'eyJraWQiOiJ...',
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsNotEmpty)(),
+    __metadata("design:type", String)
+], AppleAuthDto.prototype, "identityToken", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: "User's first name — only sent by Apple on the first sign-in",
+        required: false,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], AppleAuthDto.prototype, "firstName", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: "User's last name — only sent by Apple on the first sign-in",
+        required: false,
+    }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], AppleAuthDto.prototype, "lastName", void 0);
 class VerifyEmailDto {
 }
 exports.VerifyEmailDto = VerifyEmailDto;

@@ -12,6 +12,7 @@ var AuthProvider;
 (function (AuthProvider) {
     AuthProvider["Local"] = "local";
     AuthProvider["Google"] = "google";
+    AuthProvider["Apple"] = "apple";
 })(AuthProvider || (exports.AuthProvider = AuthProvider = {}));
 var CreatorPlan;
 (function (CreatorPlan) {

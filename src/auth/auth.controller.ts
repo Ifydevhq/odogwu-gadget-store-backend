@@ -26,7 +26,7 @@ import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ResponseMessage } from '@common/decorators/response-message.decorator';
-import { ForgotPasswordDto, GoogleAuthDto, LoginDto, RegisterDto, ResendVerificationDto, ResetPasswordDto, VerifyEmailDto } from './dto/auth.dto';
+import { AppleAuthDto, ForgotPasswordDto, GoogleAuthDto, LoginDto, RegisterDto, ResendVerificationDto, ResetPasswordDto, VerifyEmailDto } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('auth')
@@ -78,6 +78,21 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid Google token' })
   async googleAuth(@Body() googleAuthDto: GoogleAuthDto) {
     return this.authService.googleAuth(googleAuthDto.token);
+  }
+
+  // ─── POST /api/v1/auth/apple ────────────────────────────
+
+  @Post('apple')
+  @ResponseMessage('Apple authentication successful')
+  @ApiOperation({
+    summary: 'Login or register with Apple',
+    description:
+      'Verifies an Apple identity token (JWT). Creates a new account if the email is new, or logs in if it exists. firstName/lastName are only sent by Apple on the first authorization.',
+  })
+  @ApiResponse({ status: 200, description: 'Authenticated successfully' })
+  @ApiResponse({ status: 401, description: 'Invalid Apple token' })
+  async appleAuth(@Body() appleAuthDto: AppleAuthDto) {
+    return this.authService.appleAuth(appleAuthDto);
   }
 
   // ─── POST /api/v1/auth/verify-email ─────────────────────

@@ -42,6 +42,7 @@ import {
   ResetPasswordDto,
 } from './dto/auth.dto';
 import { AuthProvider } from '@config/contants';
+import { verifyAppleIdentityToken } from './apple-token.util';
 import { UserDocument } from '../users/schemas/user.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AlertsService } from '../alerts/alerts.service';
@@ -299,6 +300,72 @@ export class AuthService {
         avatar: googleUser.avatar,
         authProvider: AuthProvider.Google,
         isEmailVerified: true, // Google emails are already verified
+      });
+    }
+
+    return this.buildAuthResponse(user);
+  }
+
+  // ─── Apple Sign-In ───────────────────────────────────────
+
+  /**
+   * POST /auth/apple
+   *
+   * The mobile app runs the native "Sign in with Apple" flow and sends us the
+   * resulting identity token (a JWT signed by Apple). We verify that token
+   * against Apple's public keys, then find-or-create the user — mirroring the
+   * Google flow. Apple only returns the user's name on the FIRST authorization,
+   * so the app passes firstName/lastName along in the body when it has them.
+   */
+  async appleAuth(dto: {
+    identityToken: string;
+    firstName?: string;
+    lastName?: string;
+  }) {
+    // Allowed audiences: the native app's bundle id by default. Additional ids
+    // (e.g. a Service ID for web Sign in with Apple) can be supplied via
+    // APPLE_CLIENT_IDS as a comma-separated list.
+    const audiences = (
+      process.env.APPLE_CLIENT_IDS || 'com.odogwugadgetstore.ng'
+    )
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    const payload = await verifyAppleIdentityToken(dto.identityToken, audiences);
+
+    // Apple always returns a stable `sub`; `email` is present when the user
+    // granted it (real address or a private-relay alias). If it is ever absent
+    // we derive a stable synthetic address from `sub` so the account persists.
+    const email =
+      payload.email?.toLowerCase() || `apple_${payload.sub}@appleid.local`;
+    const firstName =
+      dto.firstName?.trim() ||
+      (payload.email ? payload.email.split('@')[0] : 'Apple');
+    const lastName = dto.lastName?.trim() || null;
+
+    return this.validateOrCreateAppleUser({ email, firstName, lastName });
+  }
+
+  /**
+   * Find existing Apple user or create a new one. Accounts are linked by email,
+   * exactly like the Google flow, so a user who previously signed up with
+   * email/password (or Google) and uses the same Apple email just logs in.
+   */
+  private async validateOrCreateAppleUser(appleUser: {
+    email: string;
+    firstName: string;
+    lastName?: string | null;
+  }) {
+    let user = await this.usersService.findByEmail(appleUser.email);
+
+    if (!user) {
+      user = await this.usersService.create({
+        email: appleUser.email,
+        firstName: appleUser.firstName,
+        lastName: appleUser.lastName || appleUser.firstName,
+        authProvider: AuthProvider.Apple,
+        isEmailVerified: true, // Apple verifies the email it releases
       });
     }
 

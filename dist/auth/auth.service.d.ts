@@ -20,6 +20,12 @@ export declare class AuthService {
     login(loginDto: LoginDto): Promise<any>;
     googleAuth(googleToken: string): Promise<any>;
     private validateOrCreateGoogleUser;
+    appleAuth(dto: {
+        identityToken: string;
+        firstName?: string;
+        lastName?: string;
+    }): Promise<any>;
+    private validateOrCreateAppleUser;
     verifyEmail(verifyEmailDto: VerifyEmailDto): Promise<any>;
     resendVerification(email: string): Promise<{
         message: string;

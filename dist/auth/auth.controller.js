@@ -32,6 +32,9 @@ let AuthController = class AuthController {
     async googleAuth(googleAuthDto) {
         return this.authService.googleAuth(googleAuthDto.token);
     }
+    async appleAuth(appleAuthDto) {
+        return this.authService.appleAuth(appleAuthDto);
+    }
     async verifyEmail(verifyEmailDto) {
         return this.authService.verifyEmail(verifyEmailDto);
     }
@@ -95,6 +98,20 @@ __decorate([
     __metadata("design:paramtypes", [auth_dto_1.GoogleAuthDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "googleAuth", null);
+__decorate([
+    (0, common_1.Post)('apple'),
+    (0, response_message_decorator_1.ResponseMessage)('Apple authentication successful'),
+    (0, swagger_1.ApiOperation)({
+        summary: 'Login or register with Apple',
+        description: 'Verifies an Apple identity token (JWT). Creates a new account if the email is new, or logs in if it exists. firstName/lastName are only sent by Apple on the first authorization.',
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: 'Authenticated successfully' }),
+    (0, swagger_1.ApiResponse)({ status: 401, description: 'Invalid Apple token' }),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.AppleAuthDto]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "appleAuth", null);
 __decorate([
     (0, common_1.Post)('verify-email'),
     (0, response_message_decorator_1.ResponseMessage)('Email verified successfully'),
