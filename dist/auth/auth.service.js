@@ -17,6 +17,7 @@ const bcrypt = require("bcrypt");
 const crypto_1 = require("crypto");
 const users_service_1 = require("../users/users.service");
 const contants_1 = require("../config/contants");
+const apple_token_util_1 = require("./apple-token.util");
 const notifications_service_1 = require("../notifications/notifications.service");
 const alerts_service_1 = require("../alerts/alerts.service");
 const contants_2 = require("../config/contants");
@@ -150,6 +151,31 @@ let AuthService = class AuthService {
                 lastName: googleUser.lastName || googleUser.firstName,
                 avatar: googleUser.avatar,
                 authProvider: contants_1.AuthProvider.Google,
+                isEmailVerified: true,
+            });
+        }
+        return this.buildAuthResponse(user);
+    }
+    async appleAuth(dto) {
+        const audiences = (process.env.APPLE_CLIENT_IDS || 'com.odogwugadgetstore.ng')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+        const payload = await (0, apple_token_util_1.verifyAppleIdentityToken)(dto.identityToken, audiences);
+        const email = payload.email?.toLowerCase() || `apple_${payload.sub}@appleid.local`;
+        const firstName = dto.firstName?.trim() ||
+            (payload.email ? payload.email.split('@')[0] : 'Apple');
+        const lastName = dto.lastName?.trim() || null;
+        return this.validateOrCreateAppleUser({ email, firstName, lastName });
+    }
+    async validateOrCreateAppleUser(appleUser) {
+        let user = await this.usersService.findByEmail(appleUser.email);
+        if (!user) {
+            user = await this.usersService.create({
+                email: appleUser.email,
+                firstName: appleUser.firstName,
+                lastName: appleUser.lastName || appleUser.firstName,
+                authProvider: contants_1.AuthProvider.Apple,
                 isEmailVerified: true,
             });
         }

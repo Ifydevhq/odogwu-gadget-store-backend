@@ -89,6 +89,38 @@ export class GoogleAuthDto {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// APPLE AUTH - Frontend sends the Apple identity token (a JWT).
+// firstName/lastName are only supplied by Apple on the FIRST
+// authorization, so they are optional.
+// ═══════════════════════════════════════════════════════════════
+
+export class AppleAuthDto {
+  @ApiProperty({
+    description: 'Apple identity token (JWT) returned by Sign in with Apple',
+    example: 'eyJraWQiOiJ...',
+  })
+  @IsString()
+  @IsNotEmpty()
+  identityToken: string;
+
+  @ApiProperty({
+    description: "User's first name — only sent by Apple on the first sign-in",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  firstName?: string;
+
+  @ApiProperty({
+    description: "User's last name — only sent by Apple on the first sign-in",
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  lastName?: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // EMAIL VERIFICATION
 // ═══════════════════════════════════════════════════════════════
 

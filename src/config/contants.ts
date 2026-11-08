@@ -27,6 +27,7 @@ export enum UserRole {
 export enum AuthProvider {
   Local = 'local', // Email + password
   Google = 'google',
+  Apple = 'apple',
 }
 
 // ═══════════════════════════════════════════════════════════════════

@@ -13,6 +13,11 @@ export declare class LoginDto {
 export declare class GoogleAuthDto {
     token: string;
 }
+export declare class AppleAuthDto {
+    identityToken: string;
+    firstName?: string;
+    lastName?: string;
+}
 export declare class VerifyEmailDto {
     email: string;
     otp: string;
