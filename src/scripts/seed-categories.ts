@@ -1,5 +1,5 @@
 /**
- * Seed script for the standard Odogwu Gadget Store category taxonomy.
+ * Seed script for the standard Odogwu Laptops & Gadgets category taxonomy.
  * Idempotent: upserts top-level categories and their subcategories keyed
  * by slug, so it is safe to run multiple times.
  *

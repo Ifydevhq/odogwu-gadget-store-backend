@@ -4,11 +4,11 @@
  * Professional, branded email templates.
  *
  * All templates accept a `brand` object from the notifications service:
- *   { appName: 'Odogwu Gadget Store', logoUrl: '...', frontendUrl: '...' }
+ *   { appName: 'Odogwu Laptops & Gadgets', logoUrl: '...', frontendUrl: '...' }
  *
  * If logoUrl is null, a styled text logo is used instead.
  *
- * PALETTE — Odogwu Gadget Store
+ * PALETTE — Odogwu Laptops & Gadgets
  *   blue   #0068FD  (sampled from the product logo; primary action colour)
  *   ink    #0A0A0B  (headings, the dark half of the accent bar)
  *   white  #FFFFFF  (card surface)

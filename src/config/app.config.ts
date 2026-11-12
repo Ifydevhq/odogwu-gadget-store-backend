@@ -31,7 +31,7 @@ function resolveLogoUrl(configured?: string): string {
 
 export default registerAs('app', () => ({
   // General
-  name: process.env.APP_NAME || 'Odogwu Gadget Store',
+  name: process.env.APP_NAME || 'Odogwu Laptops & Gadgets',
   // The mark used on the app's splash screen, served from the storefront.
   //
   // Defaulted in code rather than left to APP_LOGO_URL alone: the deployed
@@ -96,7 +96,7 @@ export default registerAs('app', () => ({
     password: process.env.MAIL_PASSWORD,
     from:
       process.env.MAIL_FROM ||
-      `${process.env.APP_NAME || 'Odogwu Gadget Store'} <noreply@odogwugadgetstore.com.ng>`,
+      `${process.env.APP_NAME || 'Odogwu Laptops & Gadgets'} <noreply@odogwugadgetstore.com.ng>`,
   },
 
   // Admin
