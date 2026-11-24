@@ -83,7 +83,7 @@ export class TermiiVerificationProvider implements SmsVerificationProvider {
           pin_length: 6,
           pin_placeholder: '< 1234 >',
           message_text:
-            'Your Odogwu Gadget Store verification code is < 1234 >. It expires in 10 minutes.',
+            'Your Odogwu Laptops & Gadgets verification code is < 1234 >. It expires in 10 minutes.',
           pin_type: 'NUMERIC',
         },
         { timeout: 15000 },

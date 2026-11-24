@@ -415,7 +415,7 @@ export class AuthService {
     this.alertsService.createAlert({
       userId: user._id,
       type: AlertType.Welcome,
-      title: 'Welcome to Odogwu Gadget Store! 🎉',
+      title: 'Welcome to Odogwu Laptops & Gadgets! 🎉',
       message: `Hi ${user.firstName}, welcome! Browse our laptops, phones and accessories — and reach out any time if you need help choosing.`,
       entityType: 'user',
       entityId: user._id,

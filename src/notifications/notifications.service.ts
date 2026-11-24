@@ -68,7 +68,7 @@ export class NotificationsService {
     // Fallback is the product's own name — the old 'Kraft' default leaked
     // another project's branding into every email whenever APP_NAME was unset.
     const appName =
-      this.configService.get<string>('app.name') || 'Odogwu Gadget Store';
+      this.configService.get<string>('app.name') || 'Odogwu Laptops & Gadgets';
     const logoUrl = this.configService.get<string>('app.logoUrl') || null;
     const frontendUrl =
       this.configService.get<string>('app.frontendUrl') ||

@@ -2,7 +2,7 @@
  * scripts/update-store-brand.ts - Rebrand the official Odogwu store
  * ===================================================================
  * Renames the admin/official store from "Odogwu Laptops" to
- * "Odogwu Gadget Store" and points its logo (and the creator profile image)
+ * "Odogwu Laptops & Gadgets" and points its logo (and the creator profile image)
  * at the new brand logo. The store name is what shows on every product card
  * ("posted by …"), so this fixes the seller badge across the marketplace.
  *
@@ -17,7 +17,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const STORE_SLUG = 'odogwu-laptops';
-const NEW_NAME = 'Odogwu Gadget Store';
+const NEW_NAME = 'Odogwu Laptops & Gadgets';
 // Solid-blue logo — reads on both light and dark product cards.
 const LOGO_PATH = '/assets/imgs/logos/ogs-logo-dark-theme.png';
 
